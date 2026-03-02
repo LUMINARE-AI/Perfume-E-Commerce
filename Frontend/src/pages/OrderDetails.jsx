@@ -1,0 +1,292 @@
+// Frontend/src/pages/OrderDetails.jsx
+
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { downloadInvoiceFile } from "../api/invoice";
+import api from "../api/axios";
+import Button from "../components/ui/Button";
+import {
+  FiPackage,
+  FiMapPin,
+  FiCreditCard,
+  FiTruck,
+  FiDownload,
+  FiAlertCircle,
+  FiExternalLink,
+  FiArrowLeft,
+  FiX
+} from "react-icons/fi";
+
+export default function OrderDetails() {
+  const { id } = useParams();
+  const [order, setOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const fetchOrder = async () => {
+    try {
+      const res = await api.get(`/orders/${id}`);
+      setOrder(res.data.data);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to load order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrder();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const handleDownloadInvoice = async () => {
+    try {
+      setDownloading(true);
+      await downloadInvoiceFile(id);
+      alert('Invoice downloaded successfully! ✅');
+    } catch (error) {
+      console.error('Invoice download error:', error);
+      alert('Failed to download invoice');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const cancelOrder = async () => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    
+    try {
+      setCancelling(true);
+      await api.put(`/orders/${order._id}/cancel`, { 
+        reason: 'Cancelled by customer' 
+      });
+      alert("Order cancelled successfully ✅");
+      fetchOrder();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Cancel failed");
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30',
+      processing: 'text-blue-400 bg-blue-400/10 border-blue-400/30',
+      shipped: 'text-purple-400 bg-purple-400/10 border-purple-400/30',
+      delivered: 'text-green-400 bg-green-400/10 border-green-400/30',
+      cancelled: 'text-red-400 bg-red-400/10 border-red-400/30'
+    };
+    return colors[status] || colors.pending;
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+          <p className="text-white">Loading order...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="text-center text-white">
+          <FiAlertCircle className="text-red-400 text-5xl mx-auto mb-4" />
+          <p className="text-red-400 text-lg mb-4">Order not found</p>
+          <Link to="/my-orders">
+            <Button>Back to Orders</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const canCancel = ['pending', 'processing'].includes(order.status);
+
+  return (
+    <main className="bg-black min-h-screen pt-20 pb-12">
+      <div className="max-w-4xl mx-auto px-4 md:px-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link 
+            to="/my-orders"
+            className="p-2 hover:bg-white/5 rounded transition"
+          >
+            <FiArrowLeft className="text-white" size={20} />
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-2xl md:text-3xl font-serif text-white">Order Details</h1>
+            <p className="text-gray-400 text-sm">Order ID: {order._id}</p>
+          </div>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
+            {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+          </span>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Order Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Items */}
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FiPackage className="text-yellow-400" size={20} />
+                <h2 className="text-white font-semibold text-lg">Order Items</h2>
+              </div>
+              <div className="space-y-4">
+                {order.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-4 p-3 bg-white/5 border border-white/5 rounded hover:border-white/10 transition"
+                  >
+                    <div className="flex-1">
+                      <p className="text-white font-medium">{item.name}</p>
+                      <p className="text-gray-400 text-sm">
+                        ₹{item.price.toLocaleString()} × {item.qty}
+                      </p>
+                    </div>
+                    <p className="text-yellow-400 font-semibold">
+                      ₹{(item.price * item.qty).toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Shipping Address */}
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FiMapPin className="text-yellow-400" size={20} />
+                <h2 className="text-white font-semibold text-lg">Shipping Address</h2>
+              </div>
+              <div className="text-gray-300 space-y-1">
+                <p className="font-medium text-white">{order.shippingAddress.name}</p>
+                <p className="text-sm">{order.shippingAddress.address}</p>
+                <p className="text-sm">
+                  {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
+                </p>
+                <p className="text-sm">Phone: {order.shippingAddress.phone}</p>
+              </div>
+            </div>
+
+            {/* Delivery Tracking */}
+            {order.delivery?.awb && (
+              <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FiTruck className="text-yellow-400" size={20} />
+                  <h2 className="text-white font-semibold text-lg">Delivery Tracking</h2>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Courier Partner</span>
+                    <span className="text-white">{order.delivery.provider || 'Delhivery'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Tracking Number</span>
+                    <span className="text-white font-mono">{order.delivery.awb}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Delivery Status</span>
+                    <span className="text-white capitalize">{order.delivery.status || 'Processing'}</span>
+                  </div>
+                  {order.delivery.trackingUrl && (
+                    <a
+                      href={order.delivery.trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 mt-3 px-4 py-2 bg-blue-500/20 border border-blue-400/30 text-blue-400 hover:bg-blue-500/30 transition rounded"
+                    >
+                      <FiExternalLink size={16} />
+                      Track Order
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Summary */}
+          <div className="space-y-6">
+            {/* Payment Info */}
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <FiCreditCard className="text-yellow-400" size={20} />
+                <h2 className="text-white font-semibold">Payment</h2>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Method</span>
+                  <span className="text-white font-medium">{order.paymentMethod.toUpperCase()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Status</span>
+                  <span className={order.isPaid ? 'text-green-400' : 'text-yellow-400'}>
+                    {order.isPaid ? 'Paid' : 'Unpaid'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Price Summary */}
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
+              <h2 className="text-white font-semibold mb-4">Order Summary</h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-gray-300">
+                  <span>Subtotal</span>
+                  <span>₹{order.itemsPrice.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Shipping</span>
+                  <span>₹{order.shippingPrice.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-gray-300">
+                  <span>Tax</span>
+                  <span>₹{order.taxPrice.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-lg font-bold text-white pt-3 border-t border-white/10">
+                  <span>Total</span>
+                  <span className="text-yellow-400">₹{order.totalPrice.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="space-y-3">
+              <button
+                onClick={handleDownloadInvoice}
+                disabled={downloading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-yellow-400 text-black font-medium rounded hover:bg-yellow-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FiDownload size={18} />
+                {downloading ? 'Downloading...' : 'Download Invoice'}
+              </button>
+
+              {canCancel && (
+                <button
+                  onClick={cancelOrder}
+                  disabled={cancelling}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/20 border border-red-400/30 text-red-400 font-medium rounded hover:bg-red-500/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiX size={18} />
+                  {cancelling ? 'Cancelling...' : 'Cancel Order'}
+                </button>
+              )}
+
+              <Link to="/my-orders" className="block">
+                <Button variant="outline" className="w-full">
+                  Back to My Orders
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+html,
+body {
+  height: 100%;
+  overflow: hidden; /* Locomotive controls scrolling */
+}
+
+#root {
+  height: 100%;
+}
+
+[data-scroll-container] {
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .cursor-follower {
+    display: none;
+  }
+}
+
+a:hover ~ .cursor-follower,
+button:hover ~ .cursor-follower {
+  transform: scale(1.8);
+}
