@@ -119,7 +119,7 @@ export const createOrder = asyncHandler(async (req, res) => {
           provider: "delhivery",
           awb,
           status: "pending",
-          trackingUrl: `https://www.delhivery.com/track/package/${awb}`,
+          trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
         };
       } else {
         order.delivery = {

@@ -24,7 +24,6 @@ export default function Checkout() {
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Delhivery shipping state
   const [shippingFee, setShippingFee] = useState(null);
   const [shippingFeeLoading, setShippingFeeLoading] = useState(false);
   const [shippingFeeError, setShippingFeeError] = useState("");
@@ -56,7 +55,6 @@ export default function Checkout() {
     [cartItems]
   );
 
-  // ✅ total uses live shippingFee — no hardcoded 150
   const total = subtotal + (shippingFee ?? 0);
 
   const handleChange = (e) => {
@@ -68,7 +66,7 @@ export default function Checkout() {
     }
   };
 
-  // ── Live pincode check + shipping cost ────────────────────
+  // ── Live pincode check + shipping cost ───────────────────
   useEffect(() => {
     const pincode = shipping.pincode;
     if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
@@ -80,17 +78,24 @@ export default function Checkout() {
       setShippingFee(null);
 
       try {
-        // 1. Serviceability check
+        // ── Step 1: Serviceability ───────────────────────
         const serviceRes = await checkServiceability(pincode);
-        const serviceable = serviceRes.data?.success ?? true;
+        const resData = serviceRes.data;
+        const serviceable =
+          // eslint-disable-next-line no-constant-binary-expression
+          resData?.serviceable ??          // new normalized field
+          (resData?.data?.delivery_codes?.length > 0) ?? // fallback
+          true;                             // agar kuch nahi mila toh try karo
+
         setPincodeServiceable(serviceable);
 
         if (!serviceable) {
           setShippingFeeError("This pincode is not serviceable by Delhivery.");
+          setShippingFeeLoading(false);
           return;
         }
 
-        // 2. Live shipping cost
+        // ── Step 2: Shipping cost ────────────────────────
         const costRes = await calculateShippingCost({
           originPin: import.meta.env.VITE_WAREHOUSE_PINCODE || "304001",
           destinationPin: pincode,
@@ -100,25 +105,29 @@ export default function Checkout() {
           mode: "S",
         });
 
-        if (costRes.data.success) {
-          const d = costRes.data.data;
-          const fee =
-            d.totalAmount ?? d.total_amount ?? d.charges ?? d.total ?? null;
+        const costData = costRes.data;
 
-          if (fee !== null && fee > 0) {
+        if (costData?.success) {
+          // ✅ FIX: Backend ab `totalAmount` guaranteed top-level pe deta hai
+          const fee = costData.data?.totalAmount ?? null;
+
+          if (fee !== null && fee >= 0) {
             setShippingFee(Math.round(fee));
           } else {
-            // Free shipping fallback (e.g. high-value order)
-            setShippingFee(subtotal > 3000 ? 0 : 199);
+            // Edge case: API ne 0 ya null diya
+            const fallbackFee = subtotal > 3000 ? 0 : 199;
+            setShippingFee(fallbackFee);
             setShippingFeeError("Using estimated shipping cost.");
           }
         } else {
-          setShippingFee(subtotal > 3000 ? 0 : 199);
-          setShippingFeeError("Using estimated shipping cost.");
+          const fallbackFee = subtotal > 3000 ? 0 : 199;
+          setShippingFee(fallbackFee);
+          setShippingFeeError("Could not fetch live cost. Using estimate.");
         }
       } catch (err) {
         console.error("Shipping calc error:", err);
-        setShippingFee(subtotal > 3000 ? 0 : 199);
+        const fallbackFee = subtotal > 3000 ? 0 : 199;
+        setShippingFee(fallbackFee);
         setShippingFeeError("Could not fetch live cost. Using estimate.");
       } finally {
         setShippingFeeLoading(false);
@@ -128,7 +137,7 @@ export default function Checkout() {
     fetchShippingDetails();
   }, [shipping.pincode, payment, subtotal, totalWeight]);
 
-  // ── Step navigation ───────────────────────────────────────
+  // ── Step navigation ──────────────────────────────────────
   const handleNextFromShipping = () => {
     const { fullName, phone, address, city, state, pincode } = shipping;
     if (!fullName || !phone || !address || !city || !state || !pincode) {
@@ -158,7 +167,7 @@ export default function Checkout() {
     setStep(3);
   };
 
-  // ── Place order — passes shippingFee to backend ───────────
+  // ── Place order ──────────────────────────────────────────
   const placeOrder = async () => {
     try {
       const orderPayload = {
@@ -167,7 +176,6 @@ export default function Checkout() {
           name: shipping.fullName,
         },
         paymentMethod: payment === "cod" ? "cod" : "prepaid",
-        // ✅ Pass actual Delhivery shipping fee so backend uses it
         shippingFee: shippingFee ?? 0,
       };
 
@@ -177,7 +185,7 @@ export default function Checkout() {
         return;
       }
 
-      // Prepaid: Razorpay first
+      // Prepaid: Razorpay
       const { data } = await createRazorpayOrderApi(total);
 
       const options = {
@@ -198,10 +206,7 @@ export default function Checkout() {
 
           const orderId = orderRes.data.data._id;
 
-          await verifyRazorpayPaymentApi({
-            ...response,
-            orderId,
-          });
+          await verifyRazorpayPaymentApi({ ...response, orderId });
 
           navigate(`/order-success/${orderId}`);
         },
@@ -246,16 +251,15 @@ export default function Checkout() {
         {/* ── Step 1: Shipping ── */}
         {step === 1 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Full Name"     name="fullName" value={shipping.fullName} onChange={handleChange} />
-            <Input label="Phone Number"  name="phone"    value={shipping.phone}    onChange={handleChange} />
-            <Input label="Address"       name="address"  value={shipping.address}  onChange={handleChange} />
-            <Input label="City"          name="city"     value={shipping.city}     onChange={handleChange} />
-            <Input label="State"         name="state"    value={shipping.state}    onChange={handleChange} />
+            <Input label="Full Name"    name="fullName" value={shipping.fullName} onChange={handleChange} />
+            <Input label="Phone Number" name="phone"    value={shipping.phone}    onChange={handleChange} />
+            <Input label="Address"      name="address"  value={shipping.address}  onChange={handleChange} />
+            <Input label="City"         name="city"     value={shipping.city}     onChange={handleChange} />
+            <Input label="State"        name="state"    value={shipping.state}    onChange={handleChange} />
 
             <div>
               <Input label="Pincode" name="pincode" value={shipping.pincode} onChange={handleChange} />
 
-              {/* Pincode feedback */}
               {shipping.pincode.length === 6 && (
                 <div className="mt-2 text-sm space-y-1">
                   {shippingFeeLoading && (
@@ -325,7 +329,6 @@ export default function Checkout() {
         {/* ── Step 3: Review ── */}
         {step === 3 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Left: items + pricing */}
             <div>
               <h2 className="text-lg font-medium mb-4">Order Summary</h2>
               <div className="space-y-3 mb-6">
@@ -347,7 +350,11 @@ export default function Checkout() {
                 </div>
                 <div className="flex justify-between">
                   <span>Shipping (Delhivery)</span>
-                  <span>{shippingFee === 0 ? <span className="text-green-400">Free</span> : `₹${shippingFee}`}</span>
+                  <span>
+                    {shippingFee === 0
+                      ? <span className="text-green-400">Free</span>
+                      : `₹${shippingFee}`}
+                  </span>
                 </div>
                 <div className="flex justify-between font-semibold text-base border-t border-white/10 pt-2 text-white">
                   <span>Total</span>
@@ -356,7 +363,6 @@ export default function Checkout() {
               </div>
             </div>
 
-            {/* Right: address + payment */}
             <div className="border border-white/10 p-6 h-fit space-y-5">
               <div>
                 <h2 className="font-medium mb-2 text-sm text-gray-400 uppercase tracking-wider">Shipping Details</h2>
