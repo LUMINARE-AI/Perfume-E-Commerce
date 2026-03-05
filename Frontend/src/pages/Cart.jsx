@@ -17,19 +17,25 @@ export default function Cart() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const fetchCart = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get("/cart");
-      setItems(res.data.data || []);
-    } catch (err) {
-      console.error(err);
-      showToast("Failed to load cart", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
+const fetchCart = async () => {
+  try {
+    setLoading(true);
+    const res = await api.get("/cart");
+    setItems(res.data.data || []);
+  } catch (err) {
 
+    if (err.response?.status === 401) {
+      // user login nahi hai → empty cart
+      setItems([]);
+      return;
+    }
+
+    console.error(err);
+    showToast("Failed to load cart", "error");
+  } finally {
+    setLoading(false);
+  }
+};
   useEffect(() => {
     fetchCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps

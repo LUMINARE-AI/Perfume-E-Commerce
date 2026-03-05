@@ -5,6 +5,7 @@ import EditProductModal from "./EditProductModal";
 import ConfirmDeleteModal from "../components/ui/ConfirmDeleteModal";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 export default function Products() {
   const [sort, setSort] = useState("newest");
@@ -18,9 +19,16 @@ export default function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+  const [searchParams] = useSearchParams();
+  const search = searchParams.get("search");
 
   const [user, setUser] = useState(null);
   const isAdmin = user?.role === "admin";
+
+  // Reset to page 1 whenever search term changes
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   const fetchProducts = async () => {
     try {
@@ -30,6 +38,7 @@ export default function Products() {
           page,
           limit: 16,
           sort,
+          search: search || undefined,
         },
       });
 
@@ -50,15 +59,19 @@ export default function Products() {
       setUser(res.data.data);
     } catch (err) {
       console.error("Failed to fetch user data:", err);
-      setUser(null); // not logged in
+      setUser(null);
     }
   };
 
   useEffect(() => {
     fetchMe();
+  }, []);
+
+  // Re-fetch whenever page, sort, or search changes
+  useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, sort]);
+  }, [page, sort, search]);
 
   const askDeleteProduct = (id) => {
     setDeleteId(id);
@@ -99,10 +112,12 @@ export default function Products() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-serif text-white mb-2">
-              Our Collection
+              {search ? `Results for "${search}"` : "Our Collection"}
             </h1>
             <p className="text-gray-400 text-sm">
-              Discover {products.length} exquisite pieces
+              {search
+                ? `${products.length} product${products.length !== 1 ? "s" : ""} found`
+                : `Discover ${products.length} exquisite pieces`}
             </p>
           </div>
 
@@ -131,7 +146,17 @@ export default function Products() {
         {/* Products Grid */}
         {products.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-400 text-lg">No products found</p>
+            <p className="text-gray-400 text-lg">
+              {search ? `No products found for "${search}"` : "No products found"}
+            </p>
+            {search && (
+              <Link
+                to="/products"
+                className="inline-block mt-4 text-sm text-yellow-400 hover:underline tracking-wider"
+              >
+                ← Clear search
+              </Link>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
