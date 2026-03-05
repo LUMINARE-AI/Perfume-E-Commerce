@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import api from "../api/axios";
 import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -101,8 +101,8 @@ export default function AddProductModal({ open, onClose, onSuccess }) {
 
       console.log("Uploading images:", images.length); // Debug log
 
-      const uploadRes = await axios.post(
-        "http://localhost:8000/api/products/images",
+      const uploadRes = await api.post(
+        "products/images",
         imageData,
         {
           headers: {
@@ -117,8 +117,8 @@ export default function AddProductModal({ open, onClose, onSuccess }) {
       console.log("Uploaded images:", uploadedImages); // Debug log
 
       // 2️⃣ Create product
-      await axios.post(
-        "http://localhost:8000/api/products",
+      await api.post(
+        "products",
         {
           name: form.name,
           brand: form.brand,
