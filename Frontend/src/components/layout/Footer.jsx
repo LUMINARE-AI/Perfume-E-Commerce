@@ -102,8 +102,8 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               {[
                 { to: "/terms", label: "Terms & Conditions" },
-                { to: "/privacy", label: "Privacy Policy" },
-                { to: "/returns", label: "Returns & Refunds" },
+                { to: "/policy", label: "Privacy Policy" },
+                { to: "/refund-policy", label: "Returns & Refunds" },
                 { to: "/track", label: "Track Order" },
                 { to: "/contact", label: "Customer Support" },
               ].map((link) => (

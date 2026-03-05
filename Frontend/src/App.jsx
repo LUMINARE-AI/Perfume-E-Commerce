@@ -22,6 +22,9 @@ import DashboardLayout from "./pages/DashboardLayout";
 import Profile from "./pages/Profile";
 import MyAddresses from "./pages/MyAddresses";
 import Security from "./pages/Security";
+import RefundPolicy from "./pages/RefundPolicy";
+import TermsAndConditions from "./pages/Terms";
+import ResetPassword from "./pages/Resetpassword";
 
 // Admin
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -30,6 +33,7 @@ import AdminOrders from "./pages/AdminOrders";
 import AdminRoute from "./pages/admin/AdminRoute";
 import AdminLayout from "./components/layout/AdminLayout";
 import AdminReviews from "./pages/AdminReviews";
+import PrivacyPolicy from "./pages/Policy";
 
 export default function App() {
   const location = useLocation();
@@ -56,6 +60,10 @@ export default function App() {
           <Route path="/order-success/:id" element={<OrderSuccess />} />
           <Route path="/my-orders" element={<MyOrders />} />
           <Route path="/my-orders/:id" element={<OrderDetails />} />
+          <Route path="/refund-policy" element={<RefundPolicy />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/policy" element={<PrivacyPolicy />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* User Dashboard */}
           <Route path="/dashboard" element={<DashboardLayout />}>

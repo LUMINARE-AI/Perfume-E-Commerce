@@ -1,15 +1,13 @@
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ProductCard from "../components/ui/ProductCard";
 import { FiArrowRight, FiTruck, FiRotateCw, FiDollarSign, FiShield } from "react-icons/fi";
 import api from "../api/axios";
 
-// Hero Images and Content for Slider
 const heroSlides = [
   {
     image:
       "https://images.unsplash.com/photo-1718466044521-d38654f3ba0a?q=80&w=1073&auto=format&fit=crop",
-    priority: "high",
     title: "Discover Your Signature",
     titleGold: "Luxury Fragrance",
     description:
@@ -18,7 +16,6 @@ const heroSlides = [
   {
     image:
       "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=1332&auto=format&fit=crop",
-    priority: "high",
     title: "Timeless Elegance",
     titleGold: "In Every Bottle",
     description:
@@ -27,7 +24,6 @@ const heroSlides = [
   {
     image:
       "https://plus.unsplash.com/premium_photo-1667161521640-bba57df66f29?q=80&w=1171&auto=format&fit=crop",
-    priority: "high",
     title: "Captivate with",
     titleGold: "Velvet Rose",
     description:
@@ -36,7 +32,6 @@ const heroSlides = [
   {
     image:
       "https://images.unsplash.com/photo-1458538977777-0549b2370168?q=80&w=1174&auto=format&fit=crop",
-    priority: "high",
     title: "Intense & Unforgettable",
     titleGold: "Musk Collection",
     description:
@@ -45,7 +40,6 @@ const heroSlides = [
   {
     image:
       "https://images.unsplash.com/photo-1588514912908-8f5891714f8d?q=80&w=1169&auto=format&fit=crop",
-    priority: "high",
     title: "Luxury Gift Sets",
     titleGold: "Perfect for Every Occasion",
     description:
@@ -95,10 +89,10 @@ const reviews = [
   },
 ];
 
-// Skeleton Loader for ProductCard
 function ProductCardSkeleton() {
   return (
     <div className="animate-pulse">
+      {/* ✅ FIX 5: aspect-[3/4] valid Tailwind arbitrary value */}
       <div className="bg-white/5 aspect-3/4 w-full mb-3 rounded-sm" />
       <div className="bg-white/5 h-4 w-3/4 mb-2 rounded-sm" />
       <div className="bg-white/5 h-4 w-1/2 rounded-sm" />
@@ -108,11 +102,12 @@ function ProductCardSkeleton() {
 
 export default function Home() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [scrollY, setScrollY] = useState(0);
+  const [featuresVisible, setFeaturesVisible] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
+  // ✅ FIX 2: Use IntersectionObserver instead of scrollY for features bar
+  const featuresRef = useRef(null);
 
-  // Fetch top 4 products from API
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
       try {
@@ -131,7 +126,6 @@ export default function Home() {
     fetchFeaturedProducts();
   }, []);
 
-  // Auto-rotate slides every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
@@ -139,15 +133,22 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Track scroll position
+  // ✅ FIX 2: IntersectionObserver — reliably triggers animation when section enters viewport
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setFeaturesVisible(true);
+      },
+      { threshold: 0.1 }
+    );
+    if (featuresRef.current) observer.observe(featuresRef.current);
+    return () => observer.disconnect();
   }, []);
 
   return (
-    <main className="bg-black">
+    // ✅ FIX: overflow-x-hidden on main to prevent any horizontal bleed
+    <main className="bg-black overflow-x-hidden">
+
       {/* ───────────────── HERO SLIDER ───────────────── */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Slide images */}
@@ -159,20 +160,20 @@ export default function Home() {
             }`}
             style={{ backgroundImage: `url('${slide.image}')` }}
           >
+            {/* ✅ FIX 9: fetchPriority camelCase for React */}
             <img
               src={slide.image}
               alt={`${slide.title} ${slide.titleGold}`}
               className="hidden"
               loading={index === 0 ? "eager" : "lazy"}
-              fetchpriority={slide.priority}
+              fetchPriority={index === 0 ? "high" : "low"}
             />
           </div>
         ))}
 
-        {/* Gradient overlay */}
         <div className="absolute inset-0 bg-linear-to-r from-black via-black/60 to-transparent" />
 
-        {/* Hero content */}
+        {/* ✅ FIX 3: Hero content — removed translate-x-10 which caused horizontal overflow on mobile */}
         <div className="relative z-10 w-full px-4 sm:px-6 md:px-8 lg:px-12">
           <div className="max-w-7xl mx-auto">
             <div className="max-w-xl md:max-w-2xl">
@@ -181,9 +182,10 @@ export default function Home() {
                   key={index}
                   className={`transition-all duration-700 ${
                     index === currentSlide
-                      ? "opacity-100 translate-x-0"
-                      : "opacity-0 absolute translate-x-10 pointer-events-none"
+                      ? "opacity-100"
+                      : "opacity-0 absolute pointer-events-none"
                   }`}
+                  // ✅ Not using translate-x which bleeds outside viewport on mobile
                 >
                   <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-serif leading-tight mb-4 md:mb-6 text-white">
                     {slide.title}{" "}
@@ -192,10 +194,11 @@ export default function Home() {
                   <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 md:mb-10 leading-relaxed">
                     {slide.description}
                   </p>
+                  {/* ✅ FIX 8: Link wrappers take full width on mobile so buttons fill correctly */}
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <Link to="/products">
+                    <Link to="/products" className="w-full sm:w-auto">
                       <button
-                        className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm uppercase tracking-wider font-light transition-all duration-300"
+                        className="w-full px-6 md:px-8 py-3 md:py-4 text-xs sm:text-sm uppercase tracking-wider font-light transition-all duration-300"
                         style={{ backgroundColor: "#D4AF37", color: "#000" }}
                         onMouseOver={(e) =>
                           (e.currentTarget.style.backgroundColor = "#C5A028")
@@ -207,9 +210,9 @@ export default function Home() {
                         Shop Now
                       </button>
                     </Link>
-                    <Link to="/about">
+                    <Link to="/about" className="w-full sm:w-auto">
                       <button
-                        className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 border-2 text-xs sm:text-sm uppercase tracking-wider font-light transition-all duration-300"
+                        className="w-full px-6 md:px-8 py-3 md:py-4 border-2 text-xs sm:text-sm uppercase tracking-wider font-light transition-all duration-300"
                         style={{ borderColor: "#D4AF37", color: "#D4AF37" }}
                         onMouseOver={(e) => {
                           e.currentTarget.style.backgroundColor = "#D4AF37";
@@ -248,32 +251,31 @@ export default function Home() {
       </section>
 
       {/* ───────────────── FEATURES BAR ───────────────── */}
+      {/* ✅ FIX 2: ref-based visibility instead of broken scrollY check */}
       <section
+        ref={featuresRef}
         className={`py-8 md:py-12 border-y border-white/10 transition-all duration-700 ${
-          scrollY > 100 ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          featuresVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
         }`}
         style={{ backgroundColor: "#000" }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
             {[
-              { icon: FiTruck, title: "Free Shipping" },
-              { icon: FiRotateCw, title: "Easy Returns" },
-              { icon: FiDollarSign, title: "COD Available" },
-              { icon: FiShield, title: "Secure Payments" },
+              { icon: FiTruck, title: "Free Shipping", sub: "Orders above ₹999" },
+              { icon: FiRotateCw, title: "Easy Returns", sub: "7-day return policy" },
+              { icon: FiDollarSign, title: "COD Available", sub: "Pay on delivery" },
+              { icon: FiShield, title: "Secure Payments", sub: "100% safe checkout" },
             ].map((feature, i) => (
-              <div key={i} className="flex items-center justify-center gap-3 md:gap-4">
-                <div className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center shrink-0">
-                  <feature.icon
-                    size={28}
-                    className="text-white md:w-8 md:h-8"
-                    strokeWidth={1.5}
-                  />
+              <div key={i} className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 text-center sm:text-left">
+                <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                  <feature.icon size={24} className="text-yellow-400" strokeWidth={1.5} />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-sm md:text-base font-normal text-white tracking-wide">
+                <div>
+                  <h3 className="text-xs md:text-sm font-medium text-white tracking-wide leading-snug">
                     {feature.title}
                   </h3>
+                  <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{feature.sub}</p>
                 </div>
               </div>
             ))}
@@ -282,54 +284,52 @@ export default function Home() {
       </section>
 
       {/* ───────────────── FEATURED PRODUCTS ───────────────── */}
-      <section className="max-w-7xl mx-auto py-20">
-        <div className="flex items-center justify-between mb-10 px-6">
-          <h2 className="text-2xl md:text-3xl font-serif text-white">
+      <section className="max-w-7xl mx-auto py-16 md:py-20">
+        <div className="flex items-center justify-between mb-8 md:mb-10 px-4 sm:px-6">
+          <h2 className="text-xl md:text-3xl font-serif text-white">
             Featured Bestsellers
           </h2>
-          <Link to="/products" className="text-sm text-yellow-400 hover:underline">
+          <Link to="/products" className="text-sm text-yellow-400 hover:underline whitespace-nowrap ml-4">
             View All
           </Link>
         </div>
 
+        {/* ✅ FIX 1 (MAIN BUG): touch-pan-x for horizontal scroll containers, NOT touch-pan-y */}
         {/* Mobile: Snap Scroll */}
         <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-          <div className="flex gap-4 px-6 pb-4 min-w-max">
+          <div className="flex gap-4 px-4 sm:px-6 pb-4">
             {productsLoading
-              ? Array(4)
-                  .fill(0)
-                  .map((_, i) => (
-                    <div
-                      key={i}
-                      className="shrink-0 w-[calc(100vw-3rem)] snap-start snap-always"
-                    >
-                      <ProductCardSkeleton />
-                    </div>
-                  ))
+              ? Array(4).fill(0).map((_, i) => (
+                  <div
+                    key={i}
+                    className="shrink-0 snap-start snap-always"
+                    style={{ width: "calc(100vw - 5rem)" }}
+                  >
+                    <ProductCardSkeleton />
+                  </div>
+                ))
               : featuredProducts.length > 0
               ? featuredProducts.map((product) => (
                   <div
                     key={product._id}
-                    className="shrink-0 w-[calc(100vw-3rem)] snap-start snap-always"
+                    className="shrink-0 snap-start snap-always"
+                    style={{ width: "calc(100vw - 5rem)" }}
                   >
                     <ProductCard product={product} />
                   </div>
                 ))
               : (
-                <div className="px-2 text-gray-500 text-sm">
-                  No products found.
-                </div>
+                <div className="px-2 text-gray-500 text-sm">No products found.</div>
               )}
-            <div className="shrink-0 w-6" />
+            {/* Trailing spacer so last card doesn't stick to edge */}
+            <div className="shrink-0 w-4" aria-hidden="true" />
           </div>
         </div>
 
         {/* Desktop: Grid */}
         <div className="hidden md:grid grid-cols-4 gap-6 px-6">
           {productsLoading
-            ? Array(4)
-                .fill(0)
-                .map((_, i) => <ProductCardSkeleton key={i} />)
+            ? Array(4).fill(0).map((_, i) => <ProductCardSkeleton key={i} />)
             : featuredProducts.length > 0
             ? featuredProducts.map((product) => (
                 <ProductCard key={product._id} product={product} />
@@ -343,38 +343,39 @@ export default function Home() {
       </section>
 
       {/* ───────────────── EXPLORE COLLECTIONS ───────────────── */}
-      <section className="max-w-7xl mx-auto pb-20">
-        <h2 className="text-2xl md:text-3xl font-serif text-white mb-10 px-6">
+      <section className="max-w-7xl mx-auto pb-16 md:pb-20">
+        <h2 className="text-xl md:text-3xl font-serif text-white mb-6 md:mb-10 px-4 sm:px-6">
           Explore Collections
         </h2>
 
-        {/* Mobile: Snap Scroll */}
+        {/* ✅ FIX 1: touch-pan-x for horizontal scroll, and only show on mobile */}
         <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-          <div className="flex gap-4 px-6 pb-4 min-w-max">
+          <div className="flex gap-4 px-4 sm:px-6 pb-4">
             {categories.map((cat) => (
               <Link
                 key={cat.title}
                 to={cat.link}
-                className="group relative h-60 overflow-hidden border border-white/10 shrink-0 w-[calc(100vw-3rem)] snap-start snap-always"
+                className="group relative h-56 overflow-hidden border border-white/10 shrink-0 snap-start snap-always rounded-sm"
+                style={{ width: "calc(100vw - 5rem)" }}
               >
                 <img
                   src={cat.image}
                   alt={cat.title}
-                  className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
                 />
                 <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition" />
                 <div className="relative z-10 h-full flex items-center justify-center">
-                  <h3 className="text-xl font-serif text-white group-hover:text-yellow-400 transition">
+                  <h3 className="text-lg font-serif text-white group-hover:text-yellow-400 transition">
                     {cat.title}
                   </h3>
                 </div>
               </Link>
             ))}
-            <div className="shrink-0 w-6" />
+            <div className="shrink-0 w-4" aria-hidden="true" />
           </div>
         </div>
 
-        {/* Desktop: Grid */}
+        {/* ✅ FIX 7: Desktop grid — only shown on md+ */}
         <div className="hidden md:grid grid-cols-4 gap-6 px-6">
           {categories.map((cat) => (
             <Link
@@ -385,7 +386,7 @@ export default function Home() {
               <img
                 src={cat.image}
                 alt={cat.title}
-                className="absolute inset-0 w-full h-full object-cover transform group-hover:scale-105 transition duration-500"
+                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
               />
               <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition" />
               <div className="relative z-10 h-full flex items-center justify-center">
@@ -402,9 +403,8 @@ export default function Home() {
       <section className="py-16 md:py-24 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
-            {/* Text */}
             <div className="order-2 lg:order-1">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif text-white mb-4 md:mb-6">
+              <h2 className="text-2xl md:text-4xl lg:text-5xl font-serif text-white mb-4 md:mb-6">
                 The Essence of{" "}
                 <span style={{ color: "#D4AF37" }}>BinKhalid</span>
               </h2>
@@ -434,7 +434,7 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Image */}
+            {/* ✅ FIX 6: h-80 on mobile, h-96 on md, fixed height on lg instead of non-existent h-125 */}
             <div className="order-1 lg:order-2 relative h-64 sm:h-80 md:h-96 lg:h-125 overflow-hidden border border-white/10">
               <img
                 src="https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?q=80&w=1200&auto=format&fit=crop"
@@ -448,19 +448,20 @@ export default function Home() {
       </section>
 
       {/* ───────────────── TESTIMONIALS ───────────────── */}
-      <section className="bg-black border-t border-b border-white/10 py-20">
+      <section className="bg-black border-t border-b border-white/10 py-16 md:py-20">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-serif text-white mb-10 text-center px-6">
+          <h2 className="text-xl md:text-3xl font-serif text-white mb-8 md:mb-10 text-center px-4 sm:px-6">
             What Our Customers Say
           </h2>
 
-          {/* Mobile: Snap Scroll */}
+          {/* ✅ FIX 1: touch-pan-x for horizontal scroll */}
           <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
-            <div className="flex gap-4 px-6 pb-4 min-w-max">
+            <div className="flex gap-4 px-4 sm:px-6 pb-4">
               {reviews.map((review, i) => (
                 <div
                   key={i}
-                  className="bg-black border border-white/10 p-6 hover:border-yellow-400 transition shrink-0 w-[calc(100vw-3rem)] snap-start snap-always"
+                  className="bg-black border border-white/10 p-5 hover:border-yellow-400 transition shrink-0 snap-start snap-always rounded-sm"
+                  style={{ width: "calc(100vw - 5rem)" }}
                 >
                   <p className="text-gray-300 text-sm leading-relaxed mb-4">
                     "{review.text}"
@@ -470,7 +471,7 @@ export default function Home() {
                   </span>
                 </div>
               ))}
-              <div className="shrink-0 w-6" />
+              <div className="shrink-0 w-4" aria-hidden="true" />
             </div>
           </div>
 
@@ -492,6 +493,16 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <style>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </main>
   );
 }

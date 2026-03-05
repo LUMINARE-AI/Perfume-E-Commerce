@@ -43,7 +43,6 @@ export default function ProductDetails() {
   const [reviews, setReviews] = useState([]);
   const [userReviewId, setUserReviewId] = useState(null);
 
-  // ✅ Pincode Check States
   const [pincode, setPincode] = useState("");
   const [checkingPincode, setCheckingPincode] = useState(false);
   const [deliveryInfo, setDeliveryInfo] = useState(null);
@@ -84,7 +83,6 @@ export default function ProductDetails() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ✅ Check Pincode Serviceability
   const handleCheckPincode = async () => {
     if (!pincode || pincode.length !== 6) {
       setPincodeError("Please enter a valid 6-digit pincode");
@@ -97,7 +95,6 @@ export default function ProductDetails() {
       setPincodeError("");
       setDeliveryInfo(null);
 
-      // Check serviceability
       const serviceRes = await checkServiceability(pincode);
 
       if (!serviceRes.data.success) {
@@ -105,7 +102,6 @@ export default function ProductDetails() {
         return;
       }
 
-      // Get TAT (Time to deliver)
       const originPin = import.meta.env.VITE_WAREHOUSE_PINCODE || "304001";
       const tatRes = await getTAT(originPin, pincode, "S");
 
@@ -288,7 +284,7 @@ export default function ProductDetails() {
 
   if (error || !product) {
     return (
-      <div className="bg-black min-h-screen flex items-center justify-center">
+      <div className="bg-black min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
           <FiAlertCircle className="text-red-400 text-5xl mx-auto mb-4" />
           <p className="text-red-400 text-lg mb-4">
@@ -303,12 +299,12 @@ export default function ProductDetails() {
   }
 
   return (
-    <main className="bg-black min-h-screen pt-20 pb-12">
-      {/* Toast Notification */}
+    <main className="bg-black min-h-screen pt-16 md:pt-20 pb-12">
+      {/* ✅ FIX 1: Toast - proper max-width, no overflow on small screens */}
       {toast && (
-        <div className="fixed top-20 right-4 z-50 animate-slide-in-right px-4">
+        <div className="fixed top-16 md:top-20 left-2 right-2 md:left-auto md:right-4 md:max-w-sm z-50 animate-slide-in-right">
           <div
-            className={`flex items-center gap-3 px-6 py-4 rounded-lg border backdrop-blur-sm shadow-lg ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-sm shadow-lg ${
               toast.type === "success"
                 ? "bg-green-500/20 border-green-400 text-green-400"
                 : toast.type === "error"
@@ -323,14 +319,14 @@ export default function ProductDetails() {
             ) : (
               <FiAlertCircle className="text-xl shrink-0" />
             )}
-            <p className="text-sm font-medium">{toast.message}</p>
+            <p className="text-sm font-medium leading-snug">{toast.message}</p>
           </div>
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6">
         {/* Breadcrumbs */}
-        <div className="mb-6">
+        <div className="mb-4 md:mb-6 overflow-hidden">
           <Breadcrumbs
             items={[
               { label: "Home", href: "/" },
@@ -341,11 +337,11 @@ export default function ProductDetails() {
         </div>
 
         {/* Product Details Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 mb-12 md:mb-16">
           {/* Image Gallery */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Main Image */}
-            <div className="relative border border-white/10 overflow-hidden bg-gray-900 aspect-square">
+            <div className="relative border border-white/10 overflow-hidden bg-gray-900 aspect-square rounded-sm">
               <img
                 src={activeImage || "/placeholder.jpg"}
                 alt={product.name}
@@ -357,44 +353,46 @@ export default function ProductDetails() {
 
               {/* Stock Badge */}
               {product.stock <= 5 && product.stock > 0 && (
-                <div className="absolute top-4 left-4 bg-yellow-400 text-black text-xs font-semibold px-3 py-1">
+                <div className="absolute top-3 left-3 bg-yellow-400 text-black text-xs font-semibold px-2 py-1">
                   Only {product.stock} left
                 </div>
               )}
               {product.stock === 0 && (
-                <div className="absolute top-4 left-4 bg-red-500 text-white text-xs font-semibold px-3 py-1">
+                <div className="absolute top-3 left-3 bg-red-500 text-white text-xs font-semibold px-2 py-1">
                   Out of Stock
                 </div>
               )}
 
               {/* Quick Actions */}
-              <div className="absolute top-4 right-4 flex flex-col gap-2">
+              <div className="absolute top-3 right-3 flex flex-col gap-2">
                 <button
                   onClick={handleShare}
-                  className="p-2 md:p-3 bg-black/80 backdrop-blur-sm border border-white/20 text-white hover:text-yellow-400 transition"
+                  className="p-2 bg-black/80 backdrop-blur-sm border border-white/20 text-white hover:text-yellow-400 transition rounded-sm"
+                  aria-label="Share product"
                 >
-                  <FiShare2 size={18} />
+                  <FiShare2 size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Thumbnails */}
-            {product.images?.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {/* ✅ FIX 2: Thumbnails - consistent sizing, touch-friendly */}
+            {product.images?.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {product.images.map((img, idx) => (
                   <button
                     key={img.public_id || idx}
                     onClick={() => setActiveImage(img.url)}
-                    className={`relative border-2 shrink-0 transition ${
+                    className={`relative border-2 shrink-0 rounded-sm transition ${
                       activeImage === img.url
                         ? "border-yellow-400"
                         : "border-white/10 hover:border-yellow-400/50"
                     }`}
+                    style={{ width: 72, height: 72 }}
                   >
                     <img
                       src={img.url}
-                      alt={`${product.name} - Image ${idx + 1}`}
-                      className="w-20 h-20 object-cover"
+                      alt={`${product.name} - ${idx + 1}`}
+                      className="w-full h-full object-cover"
                       onError={(e) => {
                         e.target.src = "/placeholder.jpg";
                       }}
@@ -406,22 +404,23 @@ export default function ProductDetails() {
           </div>
 
           {/* Product Info */}
-          <div className="text-white space-y-6">
+          <div className="text-white space-y-5">
             {/* Title & Brand */}
             <div>
-              <h1 className="text-2xl md:text-4xl font-serif mb-3">
-                {product.name}
-              </h1>
               {product.category && (
-                <span className="inline-block text-xs border border-white/20 px-3 py-1 text-gray-400 uppercase">
+                <span className="inline-block text-xs border border-white/20 px-2 py-0.5 text-gray-400 uppercase mb-2">
                   {product.category}
                 </span>
               )}
+              {/* ✅ FIX 3: Title size — too large on mobile */}
+              <h1 className="text-xl sm:text-2xl md:text-4xl font-serif leading-tight">
+                {product.name}
+              </h1>
             </div>
 
-            {/* Price */}
-            <div className="flex items-baseline gap-3">
-              <p className="text-3xl md:text-4xl font-bold text-yellow-400">
+            {/* ✅ FIX 4: Price row — flex-wrap so it doesn't overflow on 320px */}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-yellow-400">
                 ₹{product.price?.toLocaleString()}
               </p>
               {product.stock > 0 && (
@@ -438,15 +437,16 @@ export default function ProductDetails() {
             <div className="border-t border-white/10"></div>
 
             {/* ✅ Check Delivery Pincode */}
-            <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="bg-white/5 border border-white/10 rounded-lg p-3 md:p-4">
               <div className="flex items-center gap-2 mb-3">
-                <FiMapPin className="text-yellow-400" size={18} />
+                <FiMapPin className="text-yellow-400 shrink-0" size={16} />
                 <h3 className="text-sm font-semibold">Check Delivery</h3>
               </div>
 
               <div className="flex gap-2">
                 <input
                   type="text"
+                  inputMode="numeric"
                   value={pincode}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, "").slice(0, 6);
@@ -454,46 +454,43 @@ export default function ProductDetails() {
                     setPincodeError("");
                     setDeliveryInfo(null);
                   }}
-                  placeholder="Enter Pincode"
+                  placeholder="Enter 6-digit Pincode"
                   maxLength={6}
-                  className="flex-1 bg-black/50 border border-white/20 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-yellow-400 focus:outline-none"
+                  className="flex-1 min-w-0 bg-black/50 border border-white/20 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-yellow-400 focus:outline-none"
                 />
                 <button
                   onClick={handleCheckPincode}
                   disabled={checkingPincode || pincode.length !== 6}
-                  className="px-4 py-2 bg-yellow-400 text-black text-sm font-medium rounded hover:bg-yellow-300 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-2 bg-yellow-400 text-black text-sm font-medium rounded hover:bg-yellow-300 transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                 >
                   {checkingPincode ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mx-auto"></div>
                   ) : (
                     "Check"
                   )}
                 </button>
               </div>
 
-              {/* Pincode Error */}
               {pincodeError && (
-                <div className="mt-3 flex items-start gap-2 text-red-400 text-xs">
-                  <FiX className="shrink-0 mt-0.5" size={14} />
+                <div className="mt-2 flex items-start gap-2 text-red-400 text-xs">
+                  <FiX className="shrink-0 mt-0.5" size={13} />
                   <p>{pincodeError}</p>
                 </div>
               )}
 
-              {/* Delivery Info */}
               {deliveryInfo?.available && (
                 <div className="mt-3 space-y-2">
                   <div className="flex items-start gap-2 text-green-400 text-xs">
-                    <FiCheck className="shrink-0 mt-0.5" size={14} />
+                    <FiCheck className="shrink-0 mt-0.5" size={13} />
                     <p>Delivery available for pincode {pincode}</p>
                   </div>
                   {deliveryInfo.tat && (
                     <div className="flex items-start gap-2 text-gray-300 text-xs">
-                      <FiClock className="shrink-0 mt-0.5" size={14} />
+                      <FiClock className="shrink-0 mt-0.5" size={13} />
                       <p>
                         Estimated delivery:{" "}
                         <span className="font-semibold text-yellow-400">
-                          {deliveryInfo.tat.expected_delivery_days || "3-5"}{" "}
-                          days
+                          {deliveryInfo.tat.expected_delivery_days || "3-5"} days
                         </span>
                       </p>
                     </div>
@@ -502,23 +499,27 @@ export default function ProductDetails() {
               )}
             </div>
 
-            {/* Quantity Selector */}
+            {/* ✅ FIX 5: Quantity + Add to Cart — sticky on mobile bottom */}
             <div>
-              <p className="text-sm text-gray-400 mb-3">Quantity</p>
-              <div className="inline-flex items-center border border-white/30">
+              <p className="text-sm text-gray-400 mb-2">Quantity</p>
+              <div className="inline-flex items-center border border-white/30 rounded-sm">
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="px-4 py-3 hover:bg-white/5 hover:text-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-10 h-10 flex items-center justify-center hover:bg-white/5 hover:text-yellow-400 transition text-lg disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={qty <= 1}
                 >
                   −
                 </button>
-                <span className="px-6 py-3 border-x border-white/30 min-w-15 text-center">
+                {/* ✅ FIX: replaced invalid min-w-15 with explicit style */}
+                <span
+                  className="h-10 flex items-center justify-center border-x border-white/30 text-center"
+                  style={{ minWidth: "2.5rem", padding: "0 1rem" }}
+                >
                   {qty}
                 </span>
                 <button
                   onClick={() => setQty((q) => Math.min(product.stock, q + 1))}
-                  className="px-4 py-3 hover:bg-white/5 hover:text-yellow-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-10 h-10 flex items-center justify-center hover:bg-white/5 hover:text-yellow-400 transition text-lg disabled:opacity-40 disabled:cursor-not-allowed"
                   disabled={qty >= product.stock}
                 >
                   +
@@ -526,79 +527,76 @@ export default function ProductDetails() {
               </div>
             </div>
 
-            {/* Add to Cart Button */}
-            <div className="space-y-3">
+            {/* ✅ FIX 6: Add to Cart — price doesn't wrap weirdly */}
+            <div className="space-y-2">
               <Button
                 disabled={
                   product.stock === 0 || qty > product.stock || addingToCart
                 }
                 onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-2 py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 py-3 md:py-4 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {addingToCart ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
                     <span>Adding...</span>
                   </>
                 ) : (
-                  <>
-                    <FiShoppingCart size={20} />
-                    Add to Cart • ₹{(product.price * qty).toLocaleString()}
-                  </>
+                  <span className="flex items-center gap-2 flex-wrap justify-center">
+                    <FiShoppingCart size={18} />
+                    <span>
+                      Add to Cart &bull; ₹{(product.price * qty).toLocaleString()}
+                    </span>
+                  </span>
                 )}
               </Button>
 
               <p className="text-xs text-gray-500 text-center">
                 {product.stock > 0
                   ? `${product.stock} units available`
-                  : "This item is currently out of stock"}
+                  : "Currently out of stock"}
               </p>
             </div>
 
-            {/* Features */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-              <div className="flex items-start gap-3 text-sm">
-                <FiPackage
-                  className="text-yellow-400 shrink-0 mt-1"
-                  size={20}
-                />
-                <div>
-                  <p className="font-medium">Authentic</p>
-                  <p className="text-gray-400 text-xs">100% Original</p>
-                </div>
+            {/* ✅ FIX 7: Features — stack to 1 col on mobile, 3 col on sm+ */}
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
+              <div className="flex flex-col items-center text-center gap-1 py-2">
+                <FiPackage className="text-yellow-400" size={18} />
+                <p className="font-medium text-xs">Authentic</p>
+                <p className="text-gray-400 text-xs leading-tight">100% Original</p>
               </div>
-              <div className="flex items-start gap-3 text-sm">
-                <FiTruck className="text-yellow-400 shrink-0 mt-1" size={20} />
-                <div>
-                  <p className="font-medium">Free Shipping</p>
-                  <p className="text-gray-400 text-xs">On orders above ₹999</p>
-                </div>
+              <div className="flex flex-col items-center text-center gap-1 py-2">
+                <FiTruck className="text-yellow-400" size={18} />
+                <p className="font-medium text-xs">Free Ship</p>
+                <p className="text-gray-400 text-xs leading-tight">Above ₹999</p>
               </div>
-              <div className="flex items-start gap-3 text-sm">
-                <FiShield className="text-yellow-400 shrink-0 mt-1" size={20} />
-                <div>
-                  <p className="font-medium">Secure</p>
-                  <p className="text-gray-400 text-xs">Safe payment</p>
-                </div>
+              <div className="flex flex-col items-center text-center gap-1 py-2">
+                <FiShield className="text-yellow-400" size={18} />
+                <p className="font-medium text-xs">Secure</p>
+                <p className="text-gray-400 text-xs leading-tight">Safe payment</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs Section */}
-        <div className="border-t border-white/10 pt-10 mb-16">
-          <div className="flex gap-4 md:gap-8 mb-8 overflow-x-auto pb-2">
+        <div className="border-t border-white/10 pt-8 md:pt-10 mb-12 md:mb-16">
+          {/* ✅ FIX 8: Tabs — proper scroll with enough tap area */}
+          <div className="flex gap-0 mb-6 md:mb-8 overflow-x-auto scrollbar-hide border-b border-white/10">
             {["description", "reviews"].map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`uppercase text-xs md:text-sm tracking-wider transition pb-2 whitespace-nowrap ${
+                className={`uppercase text-xs md:text-sm tracking-wider transition pb-3 whitespace-nowrap px-4 md:px-6 -mb-px ${
                   tab === t
                     ? "text-yellow-400 border-b-2 border-yellow-400"
                     : "text-gray-400 hover:text-yellow-400"
                 }`}
               >
                 {t}
+                {t === "reviews" && reviews.length > 0 && (
+                  <span className="ml-1 text-xs opacity-60">({reviews.length})</span>
+                )}
               </button>
             ))}
           </div>
@@ -606,59 +604,58 @@ export default function ProductDetails() {
           <div className="text-gray-300 leading-relaxed max-w-3xl">
             {tab === "description" && (
               <div>
-                <p className="text-base md:text-lg mb-4">
+                <p className="text-sm md:text-base mb-4">
                   {product.description || "No description available."}
                 </p>
                 <p className="text-sm text-gray-400">
                   This exquisite product combines traditional craftsmanship with
-                  modern elegance, making it a perfect addition to your
-                  collection.
+                  modern elegance, making it a perfect addition to your collection.
                 </p>
               </div>
             )}
+
             {tab === "reviews" && (
-              <div className="space-y-6">
+              <div className="space-y-5">
                 {/* Add Review Form */}
                 {userReviewId ? (
-                  <div className="bg-linear-to-br from-blue-500/10 to-blue-500/5 border border-blue-400/30 rounded-xl p-4 md:p-6 backdrop-blur-sm">
-                    <div className="flex items-center gap-3">
-                      <FiCheck className="text-blue-400 text-2xl shrink-0" />
+                  <div className="bg-blue-500/10 border border-blue-400/30 rounded-xl p-4 md:p-6">
+                    <div className="flex items-start gap-3">
+                      <FiCheck className="text-blue-400 text-xl shrink-0 mt-0.5" />
                       <div>
-                        <h3 className="text-lg font-semibold text-blue-300 mb-1">
+                        <h3 className="text-base font-semibold text-blue-300 mb-1">
                           You've Already Reviewed This Product
                         </h3>
                         <p className="text-sm text-blue-200/80">
-                          Thank you for sharing your experience! You can view
-                          your review below.
+                          Thank you for sharing your experience! Your review is visible below.
                         </p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-linear-to-br from-white/5 to-white/2 border border-white/10 rounded-xl p-4 md:p-6 backdrop-blur-sm">
-                    <h3 className="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2">
-                      <FiStar className="text-yellow-400" size={20} />
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6">
+                    <h3 className="text-base md:text-xl font-semibold mb-4 flex items-center gap-2">
+                      <FiStar className="text-yellow-400" size={18} />
                       Share Your Experience
                     </h3>
 
-                    {/* Rating Selector */}
+                    {/* ✅ FIX 9: Rating buttons — horizontal scroll on very small screens */}
                     <div className="mb-4">
-                      <label className="block text-sm text-gray-300 mb-3 font-medium">
+                      <label className="block text-sm text-gray-300 mb-2 font-medium">
                         Rate This Product
                       </label>
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex gap-2">
                         {[5, 4, 3, 2, 1].map((r) => (
                           <button
                             key={r}
                             onClick={() => setRating(r)}
-                            className={`flex items-center gap-1 px-3 py-2 rounded-lg border transition duration-200 ${
+                            className={`flex items-center gap-1 px-2.5 py-2 rounded-lg border transition duration-200 shrink-0 ${
                               rating === r
                                 ? "border-yellow-400 bg-yellow-400/20"
                                 : "border-white/20 hover:border-yellow-400/50 hover:bg-white/5"
                             }`}
                           >
                             <FiStar
-                              size={16}
+                              size={14}
                               className={
                                 rating === r
                                   ? "fill-yellow-400 text-yellow-400"
@@ -671,7 +668,6 @@ export default function ProductDetails() {
                       </div>
                     </div>
 
-                    {/* Comment */}
                     <div className="mb-4">
                       <label className="block text-sm text-gray-300 mb-2 font-medium">
                         Your Review
@@ -682,20 +678,20 @@ export default function ProductDetails() {
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Share your thoughts about this product..."
                         maxLength={500}
-                        className="w-full bg-black/50 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-yellow-400 focus:outline-none transition text-sm md:text-base resize-none"
+                        className="w-full bg-black/50 border border-white/20 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:border-yellow-400 focus:outline-none transition text-sm resize-none"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        {comment.length} / 500 characters
+                      <p className="text-xs text-gray-500 mt-1 text-right">
+                        {comment.length}/500
                       </p>
                     </div>
 
                     <button
                       disabled={submitting || !comment.trim()}
                       onClick={handleAddReview}
-                      className={`w-full md:w-auto border border-yellow-400 text-yellow-400 px-6 py-3 rounded-lg font-medium transition duration-200 ${
+                      className={`w-full sm:w-auto border border-yellow-400 text-yellow-400 px-6 py-2.5 rounded-lg font-medium transition duration-200 text-sm ${
                         submitting || !comment.trim()
                           ? "opacity-50 cursor-not-allowed"
-                          : "hover:bg-yellow-400 hover:text-black hover:shadow-lg hover:shadow-yellow-400/50"
+                          : "hover:bg-yellow-400 hover:text-black"
                       }`}
                     >
                       {submitting ? (
@@ -710,27 +706,26 @@ export default function ProductDetails() {
                   </div>
                 )}
 
-                {/* Existing Reviews */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-white">
-                      Customer Reviews ({reviews.length})
-                    </h4>
-                  </div>
+                {/* Reviews List */}
+                <div>
+                  <h4 className="text-base font-semibold text-white mb-4">
+                    Customer Reviews ({reviews.length})
+                  </h4>
 
                   {reviews.length === 0 ? (
-                    <div className="text-center py-12">
-                      <FiStar className="text-gray-600 text-5xl mx-auto mb-3 opacity-50" />
-                      <p className="text-gray-400">
+                    <div className="text-center py-10">
+                      <FiStar className="text-gray-600 text-4xl mx-auto mb-3 opacity-50" />
+                      <p className="text-gray-400 text-sm">
                         No reviews yet. Be the first to review!
                       </p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    /* ✅ FIX 10: Reviews — 1 col on mobile, 2 col on md+ */
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                       {reviews.map((r) => (
                         <div
                           key={r._id}
-                          className={`bg-linear-to-br from-white/5 to-white/2 border rounded-xl p-4 md:p-5 backdrop-blur-sm hover:border-yellow-400/30 transition duration-300 group ${
+                          className={`bg-white/5 border rounded-xl p-4 hover:border-yellow-400/30 transition duration-300 ${
                             userReviewId === r._id
                               ? "border-blue-400/50 ring-1 ring-blue-400/30"
                               : "border-white/10"
@@ -738,27 +733,25 @@ export default function ProductDetails() {
                         >
                           {userReviewId === r._id && (
                             <div className="flex items-center gap-1 mb-2 pb-2 border-b border-blue-400/20">
-                              <span className="text-xs bg-blue-400/20 text-blue-300 px-2 py-1 rounded border border-blue-400/30">
+                              <span className="text-xs bg-blue-400/20 text-blue-300 px-2 py-0.5 rounded border border-blue-400/30">
                                 Your Review
                               </span>
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex gap-1">
-                              {renderStars(r.rating)}
-                            </div>
-                            <span className="text-yellow-400 font-semibold text-sm">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex gap-0.5">{renderStars(r.rating)}</div>
+                            <span className="text-yellow-400 font-semibold text-xs">
                               {r.rating}.0
                             </span>
                           </div>
 
-                          <p className="text-gray-300 text-sm md:text-base mb-3 leading-relaxed line-clamp-3">
+                          <p className="text-gray-300 text-sm mb-3 leading-relaxed line-clamp-3">
                             "{r.comment}"
                           </p>
 
                           <div className="flex items-center gap-2 pt-3 border-t border-white/5">
-                            <div className="w-8 h-8 rounded-full bg-yellow-400/20 flex items-center justify-center border border-yellow-400/30">
+                            <div className="w-7 h-7 rounded-full bg-yellow-400/20 flex items-center justify-center border border-yellow-400/30 shrink-0">
                               <span className="text-yellow-400 text-xs font-bold">
                                 {r.user?.name?.charAt(0).toUpperCase()}
                               </span>
@@ -767,9 +760,7 @@ export default function ProductDetails() {
                               <p className="text-sm font-medium text-gray-300 truncate">
                                 {r.user?.name}
                               </p>
-                              <p className="text-xs text-gray-500">
-                                Verified Buyer
-                              </p>
+                              <p className="text-xs text-gray-500">Verified Buyer</p>
                             </div>
                           </div>
                         </div>
@@ -784,30 +775,32 @@ export default function ProductDetails() {
 
         {/* Explore More */}
         {moreProducts.length > 0 && (
-          <section className="mb-12">
-            <div className="flex items-center justify-between mb-8">
+          <section className="mb-8">
+            <div className="flex items-center justify-between mb-6 md:mb-8">
               <div>
-                <h2 className="text-2xl md:text-3xl font-serif text-white mb-2">
+                <h2 className="text-xl md:text-3xl font-serif text-white mb-1">
                   Explore Our Collection
                 </h2>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-400 text-xs md:text-sm">
                   Discover more exquisite pieces
                 </p>
               </div>
               <Link
                 to="/products"
-                className="text-yellow-400 hover:text-yellow-300 text-sm transition hidden md:block"
+                className="text-yellow-400 hover:text-yellow-300 text-sm transition hidden md:block whitespace-nowrap"
               >
                 View All →
               </Link>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+
+            {/* ✅ FIX 11: "Explore more" — 2 col on mobile is fine for cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
               {moreProducts.map((p) => (
                 <ProductCard key={p._id} product={p} />
               ))}
             </div>
 
-            <div className="mt-8 text-center md:hidden">
+            <div className="mt-6 text-center md:hidden">
               <Link to="/products">
                 <Button variant="outline" className="w-full">
                   View All Products
@@ -820,14 +813,8 @@ export default function ProductDetails() {
 
       <style>{`
         @keyframes slide-in-right {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);   opacity: 1; }
         }
         .animate-slide-in-right {
           animation: slide-in-right 0.3s ease-out;
