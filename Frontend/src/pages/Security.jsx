@@ -2,6 +2,7 @@ import { useState } from "react";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import { logout } from "../utils/authUtils"; // ← adjust path if needed
 
 export default function Security() {
   const [passwords, setPasswords] = useState({
@@ -12,11 +13,6 @@ export default function Security() {
   const changePassword = async () => {
     await api.put("/users/change-password", passwords);
     alert("Password updated");
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
   };
 
   return (
@@ -41,7 +37,8 @@ export default function Security() {
         <Button onClick={changePassword}>Change Password</Button>
       </div>
 
-      <Button variant="outline" onClick={logout}>
+      {/* logout() with no navigate → uses window.location.href = "/login" */}
+      <Button variant="outline" onClick={() => logout(null, "/login")}>
         Logout
       </Button>
     </div>
