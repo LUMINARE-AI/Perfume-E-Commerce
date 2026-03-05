@@ -1,17 +1,23 @@
 @import "tailwindcss";
 
-html,
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  height: 100%;
-  overflow: hidden; /* Locomotive controls scrolling */
+  overflow-x: hidden;
 }
 
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 [data-scroll-container] {
   min-height: 100vh;
+}
+
+* {
+  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 768px) {

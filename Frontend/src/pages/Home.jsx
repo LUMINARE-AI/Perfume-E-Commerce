@@ -149,7 +149,7 @@ export default function Home() {
   return (
     <main className="bg-black">
       {/* ───────────────── HERO SLIDER ───────────────── */}
-      <section className="relative h-screen flex items-center overflow-hidden">
+      <section className="relative min-h-screen flex items-center overflow-hidden">
         {/* Slide images */}
         {heroSlides.map((slide, index) => (
           <div
@@ -293,8 +293,8 @@ export default function Home() {
         </div>
 
         {/* Mobile: Snap Scroll */}
-        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-          <div className="flex gap-4 px-6 pb-4">
+        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+          <div className="flex gap-4 px-6 pb-4 min-w-max">
             {productsLoading
               ? Array(4)
                   .fill(0)
@@ -349,8 +349,8 @@ export default function Home() {
         </h2>
 
         {/* Mobile: Snap Scroll */}
-        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-          <div className="flex gap-4 px-6 pb-4">
+        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+          <div className="flex gap-4 px-6 pb-4 min-w-max">
             {categories.map((cat) => (
               <Link
                 key={cat.title}
@@ -455,8 +455,8 @@ export default function Home() {
           </h2>
 
           {/* Mobile: Snap Scroll */}
-          <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-            <div className="flex gap-4 px-6 pb-4">
+          <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+            <div className="flex gap-4 px-6 pb-4 min-w-max">
               {reviews.map((review, i) => (
                 <div
                   key={i}
