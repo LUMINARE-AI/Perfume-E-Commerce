@@ -12,7 +12,8 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cart is empty");
   }
 
-  const { shippingAddress, paymentMethod } = req.body;
+  // ✅ shippingFee bhi lo frontend se
+  const { shippingAddress, paymentMethod, shippingFee } = req.body;
 
   if (!shippingAddress || !paymentMethod) {
     throw new ApiError(400, "Shipping address and payment method are required");
@@ -44,14 +45,20 @@ export const createOrder = asyncHandler(async (req, res) => {
   );
 
   const taxPrice = 0;
-  const shippingPrice = itemsPrice > 3000 ? 0 : 150;
+
+  // ✅ Live Delhivery fee use karo, fallback: >3000 = free, else 150
+  const shippingPrice =
+    shippingFee !== undefined && shippingFee !== null
+      ? Number(shippingFee)
+      : itemsPrice > 3000 ? 0 : 150;
+
   const totalPrice = itemsPrice + taxPrice + shippingPrice;
 
-  //Normalize payment method
+  // Normalize payment method
   const normalizedPaymentMethod =
     paymentMethod.toLowerCase() === "cod" ? "COD" : "PREPAID";
 
-  //Create order (unpaid initially for both)
+  // Create order (unpaid initially for both)
   const order = await Order.create({
     user: user._id,
     items,
@@ -69,7 +76,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     taxPrice,
     shippingPrice,
     totalPrice,
-    isPaid: false, // 🔥 prepaid paid later, COD paid on delivery
+    isPaid: false,
   });
 
   // 🚚 Create Delhivery shipment ONLY for COD
@@ -140,6 +147,7 @@ export const createOrder = asyncHandler(async (req, res) => {
     .status(201)
     .json(new ApiResponse(201, order, "Order created successfully"));
 });
+
 /**
  * Get My Orders
  * GET /api/orders/my-orders
@@ -357,7 +365,6 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 
   // 💰 Refund logic (Prepaid orders)
   if (order.isPaid) {
-    // 👉 Future: Razorpay refund API integrate
     order.paymentResult = {
       ...order.paymentResult,
       refundStatus: "initiated",
@@ -367,7 +374,6 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   // 🚚 Cancel Delhivery shipment if AWB generated
   if (order.delivery?.awb && order.delivery.status !== "delivered") {
     try {
-      // optional: call delhiveryService.cancelShipment(order.delivery.awb);
       order.delivery.status = "failed";
     } catch (err) {
       console.error("Failed to cancel shipment:", err);
@@ -381,3 +387,40 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   );
 });
 
+/**
+ * Update Delivery Info (Admin) — AWB save karne ke liye after manual shipment creation
+ * PUT /api/orders/:id/delivery
+ *
+ * ⚠️  order.routes.js mein ye line add karo:
+ *   router.put("/:id/delivery", verifyJWT, isAdmin, updateOrderDelivery);
+ */
+export const updateOrderDelivery = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { awb, provider, status, trackingUrl, error } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid order ID");
+  }
+
+  const order = await Order.findById(id);
+  if (!order) throw new ApiError(404, "Order not found");
+
+  order.delivery = {
+    provider: provider || "delhivery",
+    awb: awb || order.delivery?.awb,
+    status: status || "pending",
+    trackingUrl: trackingUrl || order.delivery?.trackingUrl,
+    ...(error && { error }),
+  };
+
+  // AWB mil gayi toh status processing kar do (agar abhi pending hai)
+  if (awb && order.status === "pending") {
+    order.status = "processing";
+  }
+
+  await order.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, order, "Delivery info updated"));
+});
