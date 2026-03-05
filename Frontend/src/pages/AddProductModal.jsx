@@ -102,7 +102,7 @@ export default function AddProductModal({ open, onClose, onSuccess }) {
       console.log("Uploading images:", images.length); // Debug log
 
       const uploadRes = await api.post(
-        "products/images",
+        "/products/images",
         imageData,
         {
           headers: {
@@ -118,7 +118,7 @@ export default function AddProductModal({ open, onClose, onSuccess }) {
 
       // 2️⃣ Create product
       await api.post(
-        "products",
+        "/products",
         {
           name: form.name,
           brand: form.brand,
