@@ -6,7 +6,7 @@ import {
   generateShippingLabel,
   trackShipment,
   downloadFile,
-} from "../../api/delhivery";
+} from "../api/delhivery";
 import {
   FiPackage,
   FiTruck,
