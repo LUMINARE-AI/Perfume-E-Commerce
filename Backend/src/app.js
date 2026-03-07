@@ -14,23 +14,35 @@ import invoiceRoutes from "./routes/invoice.routes.js";
 
 const app = express();
 
-// Middleware
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:3000",
   "https://binkhalid.in",
-  "https://www.binkhalid.in"
+  "https://www.binkhalid.in",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
+      // ✅ Debug: kaunsa origin aa raha hai
+      if (origin) console.log("🌐 Request from origin:", origin);
+
+      // No origin — server-to-server ya Postman
+      if (!origin) return callback(null, true);
+
+      // Exact match
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      // ✅ Vercel preview deployments allow karo
+      if (origin.endsWith(".vercel.app")) return callback(null, true);
+
+      // ✅ Render preview deployments
+      if (origin.endsWith(".onrender.com")) return callback(null, true);
+
+      console.error("❌ CORS blocked:", origin);
+      callback(new Error("Not allowed by CORS"));
     },
-    credentials: true
+    credentials: true,
   })
 );
 
