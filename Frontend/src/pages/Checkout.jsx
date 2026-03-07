@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import api from "../api/axios";
@@ -28,6 +28,10 @@ export default function Checkout() {
   const [shippingFeeLoading, setShippingFeeLoading] = useState(false);
   const [shippingFeeError, setShippingFeeError] = useState("");
   const [pincodeServiceable, setPincodeServiceable] = useState(null);
+
+  // ✅ Pichli successful fee yaad rakhne ke liye
+  // Agar recalculation fail ho toh yeh use hogi, 199 nahi
+  const lastSuccessfulFee = useRef(null);
 
   const navigate = useNavigate();
 
@@ -61,31 +65,33 @@ export default function Checkout() {
     setShipping({ ...shipping, [e.target.name]: e.target.value });
     if (e.target.name === "pincode") {
       setShippingFee(null);
+      lastSuccessfulFee.current = null;
       setPincodeServiceable(null);
       setShippingFeeError("");
     }
   };
 
-  // ── Live pincode check + shipping cost ───────────────────
-  useEffect(() => {
-    const pincode = shipping.pincode;
-    if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
+  // ✅ isPincodeCheck: true = pincode change (full flow)
+  //                   false = payment change (sirf cost recalculate)
+  const fetchShippingDetails = async (pincode, paymentMode, isPincodeCheck = false) => {
+    setShippingFeeLoading(true);
+    setShippingFeeError("");
 
-    const fetchShippingDetails = async () => {
-      setShippingFeeLoading(true);
-      setShippingFeeError("");
+    if (isPincodeCheck) {
       setPincodeServiceable(null);
       setShippingFee(null);
+      lastSuccessfulFee.current = null;
+    }
 
-      try {
-        // ── Step 1: Serviceability ───────────────────────
+    try {
+      // Step 1: Serviceability — sirf pincode change pe check karo
+      if (isPincodeCheck) {
         const serviceRes = await checkServiceability(pincode);
         const resData = serviceRes.data;
         const serviceable =
-          // eslint-disable-next-line no-constant-binary-expression
-          resData?.serviceable ??          // new normalized field
-          (resData?.data?.delivery_codes?.length > 0) ?? // fallback
-          true;                             // agar kuch nahi mila toh try karo
+          resData?.serviceable != null
+            ? resData.serviceable
+            : (resData?.data?.delivery_codes?.length ?? 0) > 0;
 
         setPincodeServiceable(serviceable);
 
@@ -94,48 +100,72 @@ export default function Checkout() {
           setShippingFeeLoading(false);
           return;
         }
+      }
 
-        // ── Step 2: Shipping cost ────────────────────────
-        const costRes = await calculateShippingCost({
-          originPin: import.meta.env.VITE_WAREHOUSE_PINCODE || "304001",
-          destinationPin: pincode,
-          weight: Math.max(totalWeight, 500),
-          paymentMode: payment === "cod" ? "COD" : "Pre-paid",
-          collectableAmount: payment === "cod" ? subtotal : 0,
-          mode: "S",
-        });
+      // Step 2: Live shipping cost
+      const costRes = await calculateShippingCost({
+        originPin: import.meta.env.VITE_WAREHOUSE_PINCODE || "304001",
+        destinationPin: pincode,
+        weight: Math.max(totalWeight, 500),
+        // ✅ Payment mode sahi pass karo — COD aur Prepaid rates alag hain
+        paymentMode: paymentMode === "cod" ? "COD" : "Pre-paid",
+        collectableAmount: paymentMode === "cod" ? subtotal : 0,
+        mode: "S",
+      });
 
-        const costData = costRes.data;
+      const costData = costRes.data;
 
-        if (costData?.success) {
-          // ✅ FIX: Backend ab `totalAmount` guaranteed top-level pe deta hai
-          const fee = costData.data?.totalAmount ?? null;
+      if (costData?.success) {
+        const fee = costData.data?.totalAmount ?? null;
 
-          if (fee !== null && fee >= 0) {
-            setShippingFee(Math.round(fee));
-          } else {
-            // Edge case: API ne 0 ya null diya
-            const fallbackFee = subtotal > 3000 ? 0 : 199;
-            setShippingFee(fallbackFee);
-            setShippingFeeError("Using estimated shipping cost.");
-          }
+        if (fee !== null && fee >= 0) {
+          const roundedFee = Math.round(fee);
+          setShippingFee(roundedFee);
+          lastSuccessfulFee.current = roundedFee; // ✅ Save karo
         } else {
-          const fallbackFee = subtotal > 3000 ? 0 : 199;
-          setShippingFee(fallbackFee);
+          // API ne 0 ya invalid diya — pichli fee use karo
+          const fallback = lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
+          setShippingFee(fallback);
+          setShippingFeeError("Using estimated shipping cost.");
+        }
+      } else {
+        // ✅ API fail — pichli successful fee use karo, 199 nahi
+        const fallback = lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
+        setShippingFee(fallback);
+        if (!lastSuccessfulFee.current) {
           setShippingFeeError("Could not fetch live cost. Using estimate.");
         }
-      } catch (err) {
-        console.error("Shipping calc error:", err);
-        const fallbackFee = subtotal > 3000 ? 0 : 199;
-        setShippingFee(fallbackFee);
-        setShippingFeeError("Could not fetch live cost. Using estimate.");
-      } finally {
-        setShippingFeeLoading(false);
       }
-    };
+    } catch (err) {
+      console.error("Shipping calc error:", err);
+      // ✅ Error pe bhi pichli fee use karo
+      const fallback = lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
+      setShippingFee(fallback);
+      if (!lastSuccessfulFee.current) {
+        setShippingFeeError("Could not fetch live cost. Using estimate.");
+      }
+    } finally {
+      setShippingFeeLoading(false);
+    }
+  };
 
-    fetchShippingDetails();
-  }, [shipping.pincode, payment, subtotal, totalWeight]);
+  // ── Pincode change pe full flow ──────────────────────────
+  useEffect(() => {
+    const pincode = shipping.pincode;
+    if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
+    fetchShippingDetails(pincode, payment, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipping.pincode, subtotal, totalWeight]);
+
+  // ── Payment method change pe sirf cost recalculate ──────
+  useEffect(() => {
+    const pincode = shipping.pincode;
+    if (pincode.length !== 6 || !/^\d{6}$/.test(pincode)) return;
+    if (pincodeServiceable === false) return; // serviceable nahi hai toh skip
+    if (shippingFee === null && lastSuccessfulFee.current === null) return; // pehle pincode check nahi hua
+    fetchShippingDetails(pincode, payment, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payment]);
 
   // ── Step navigation ──────────────────────────────────────
   const handleNextFromShipping = () => {
@@ -170,13 +200,16 @@ export default function Checkout() {
   // ── Place order ──────────────────────────────────────────
   const placeOrder = async () => {
     try {
+      // ✅ shippingFee state se lo — yeh latest calculated value hai
+      const finalShippingFee = shippingFee ?? lastSuccessfulFee.current ?? 0;
+
       const orderPayload = {
         shippingAddress: {
           ...shipping,
           name: shipping.fullName,
         },
         paymentMethod: payment === "cod" ? "cod" : "prepaid",
-        shippingFee: shippingFee ?? 0,
+        shippingFee: finalShippingFee,
       };
 
       if (payment === "cod") {
@@ -205,9 +238,7 @@ export default function Checkout() {
           });
 
           const orderId = orderRes.data.data._id;
-
           await verifyRazorpayPaymentApi({ ...response, orderId });
-
           navigate(`/order-success/${orderId}`);
         },
 
@@ -309,9 +340,26 @@ export default function Checkout() {
                 <label key={value} className="flex items-center gap-3 cursor-pointer">
                   <input type="radio" checked={payment === value} onChange={() => setPayment(value)} />
                   <span>{label}</span>
+                  {/* ✅ Live fee update dikhao jab payment switch karo */}
+                  {shippingFeeLoading && (
+                    <span className="text-xs text-gray-400 ml-auto flex items-center gap-1">
+                      <span className="w-2.5 h-2.5 border border-gray-400 border-t-transparent rounded-full animate-spin" />
+                      Updating...
+                    </span>
+                  )}
                 </label>
               ))}
             </div>
+
+            {/* ✅ Show updated shipping fee on payment step */}
+            {shippingFee !== null && !shippingFeeLoading && (
+              <div className="mb-6 p-3 bg-white/5 border border-white/10 text-sm text-gray-300 flex justify-between">
+                <span>Shipping charge ({payment === "cod" ? "COD" : "Online"})</span>
+                <span className="text-yellow-400 font-medium">
+                  {shippingFee === 0 ? "Free" : `₹${shippingFee}`}
+                </span>
+              </div>
+            )}
 
             {payment === "razorpay" && (
               <p className="text-sm text-yellow-400 mb-6">
@@ -321,7 +369,9 @@ export default function Checkout() {
 
             <div className="flex gap-4">
               <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              <Button onClick={handleNextFromPayment}>Continue to Review</Button>
+              <Button onClick={handleNextFromPayment} disabled={shippingFeeLoading}>
+                {shippingFeeLoading ? "Updating..." : "Continue to Review"}
+              </Button>
             </div>
           </div>
         )}
@@ -349,7 +399,7 @@ export default function Checkout() {
                   <span>₹{subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping (Delhivery)</span>
+                  <span>Shipping ({payment === "cod" ? "COD" : "Online"})</span>
                   <span>
                     {shippingFee === 0
                       ? <span className="text-green-400">Free</span>
