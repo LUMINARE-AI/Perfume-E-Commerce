@@ -24,7 +24,7 @@ const productSchema = new mongoose.Schema(
       {
         url: { type: String, required: true },
         public_id: { type: String, required: true },
-        isCover: { type: Boolean, default: false }, // 👈 cover image flag
+        isCover: { type: Boolean, default: false }, 
       },
     ],
     stock: {

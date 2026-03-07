@@ -18,7 +18,7 @@ const orderItemSchema = new mongoose.Schema(
       type: Number,
       required: true, // snapshot of price at order time
     },
-    qty: { // ✅ Changed from 'quantity' to 'qty'
+    qty: { 
       type: Number,
       required: true,
       min: 1,
@@ -37,7 +37,7 @@ const orderSchema = new mongoose.Schema(
     items: [orderItemSchema],
 
     shippingAddress: {
-      name: { type: String }, // ✅ Changed from 'fullName'
+      name: { type: String },
       phone: { type: String, required: true },
       address: { type: String, required: true },
       city: { type: String, required: true },
@@ -48,7 +48,7 @@ const orderSchema = new mongoose.Schema(
 
     paymentMethod: {
       type: String,
-      enum: ["COD", "PREPAID", "CARD", "UPI"], // ✅ Added uppercase options
+      enum: ["COD", "PREPAID", "CARD", "UPI"],
       default: "COD",
     },
 

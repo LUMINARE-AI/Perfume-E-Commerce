@@ -100,7 +100,7 @@ export const createOrder = asyncHandler(async (req, res) => {
         weight: 500,
 
         pickupLocationName:
-          process.env.DELHIVERY_PICKUP_LOCATION || "Main Warehouse",
+          process.env.DELHIVERY_PICKUP_NAME || "Main Warehouse",
 
         sellerName: process.env.SELLER_NAME || "BinKhalid Store",
         sellerAddress: process.env.SELLER_ADDRESS || "",
