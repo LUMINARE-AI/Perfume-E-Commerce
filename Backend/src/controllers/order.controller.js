@@ -97,17 +97,18 @@ export const createOrder = asyncHandler(async (req, res) => {
         codAmount: totalPrice,
         totalAmount: totalPrice,
         quantity: items.reduce((sum, item) => sum + item.qty, 0),
-        weight: 500,
+        weight: 0.5,
 
         pickupLocationName:
-          process.env.DELHIVERY_PICKUP_NAME || "Main Warehouse",
+          process.env.DELHIVERY_PICKUP_NAME || "BinKhalid",
 
-        sellerName: process.env.SELLER_NAME || "BinKhalid Store",
+        sellerName: process.env.SELLER_NAME || "MOHAMMAD MOOSAA KHAN",
         sellerAddress: process.env.SELLER_ADDRESS || "",
         sellerGST: process.env.SELLER_GST || "",
       };
 
       const delhiveryRes = await createShipment(shipmentData);
+      console.log("DELHIVERY RESPONSE:", JSON.stringify(delhiveryRes, null, 2));
 
       if (delhiveryRes.success) {
         const awb =
@@ -129,6 +130,7 @@ export const createOrder = asyncHandler(async (req, res) => {
         };
       }
     } catch (err) {
+      console.error("DELHIVERY ERROR:", err);
       order.delivery = {
         provider: "delhivery",
         status: "failed",
