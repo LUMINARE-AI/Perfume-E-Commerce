@@ -12,6 +12,7 @@ import delhiveryRoutes from "./routes/delhivery.routes.js";
 import razorpayRoutes from "./routes/razorpay.routes.js";
 import invoiceRoutes from "./routes/invoice.routes.js";
 
+
 const app = express();
 
 const allowedOrigins = [

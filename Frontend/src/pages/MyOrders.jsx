@@ -7,19 +7,27 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchOrders = async () => {
+    try {
+      const res = await api.get("/orders/my");
+      setOrders(res.data.data || []);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await api.get("/orders/my");
-        setOrders(res.data.data || []);
-      } catch (err) {
-        console.error(err);
-        alert("Failed to fetch orders");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchOrders();
+
+    // 🔄 auto refresh every 30 seconds
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {

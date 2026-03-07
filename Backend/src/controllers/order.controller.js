@@ -19,7 +19,13 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Shipping address and payment method are required");
   }
 
-  const requiredAddressFields = ["address", "city", "state", "pincode", "phone"];
+  const requiredAddressFields = [
+    "address",
+    "city",
+    "state",
+    "pincode",
+    "phone",
+  ];
   const missingFields = requiredAddressFields.filter(
     (field) => !shippingAddress[field]
   );
@@ -50,7 +56,9 @@ export const createOrder = asyncHandler(async (req, res) => {
   const shippingPrice =
     shippingFee !== undefined && shippingFee !== null
       ? Number(shippingFee)
-      : itemsPrice > 3000 ? 0 : 150;
+      : itemsPrice > 3000
+        ? 0
+        : 150;
 
   const totalPrice = itemsPrice + taxPrice + shippingPrice;
 
@@ -88,22 +96,24 @@ export const createOrder = asyncHandler(async (req, res) => {
         customerPincode: shippingAddress.pincode,
         customerCity: shippingAddress.city,
         customerState: shippingAddress.state,
-        customerCountry: shippingAddress.country || "India",
+        customerCountry: "India",
         customerPhone: shippingAddress.phone,
 
         orderNumber: order._id.toString(),
         paymentMode: "COD",
-        productDescription: items.map((item) => item.name).join(", "),
+
+        productDescription: items.map((i) => i.name).join(", "),
         codAmount: totalPrice,
         totalAmount: totalPrice,
-        quantity: items.reduce((sum, item) => sum + item.qty, 0),
+
+        quantity: items.reduce((sum, i) => sum + i.qty, 0),
+
         weight: 0.5,
 
-        pickupLocationName:
-          process.env.DELHIVERY_PICKUP_NAME || "BinKhalid",
+        pickupLocationName: process.env.DELHIVERY_PICKUP_NAME || "BinKhalid",
 
         sellerName: process.env.SELLER_NAME || "MOHAMMAD MOOSAA KHAN",
-        sellerAddress: process.env.SELLER_ADDRESS || "",
+        sellerAddress: process.env.SELLER_ADDRESS || "Jaipur Rajasthan India",
         sellerGST: process.env.SELLER_GST || "",
       };
 
@@ -111,10 +121,25 @@ export const createOrder = asyncHandler(async (req, res) => {
       console.log("DELHIVERY RESPONSE:", JSON.stringify(delhiveryRes, null, 2));
 
       if (delhiveryRes.success) {
-        const awb =
-          delhiveryRes.data?.packages?.[0]?.waybill ||
-          delhiveryRes.data?.waybill ||
-          `TEMP${Date.now()}`;
+        const awb = delhiveryRes.data?.packages?.[0]?.waybill;
+
+        if (awb) {
+          order.delivery = {
+            provider: "delhivery",
+            awb,
+            status: "pending",
+            trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
+          };
+        } else {
+          order.delivery = {
+            provider: "delhivery",
+            status: "pending",
+            awb: null,
+            error:
+              delhiveryRes.data?.packages?.[0]?.remarks?.[0] ||
+              "Shipment creation failed",
+          };
+        }
 
         order.delivery = {
           provider: "delhivery",
@@ -130,10 +155,10 @@ export const createOrder = asyncHandler(async (req, res) => {
         };
       }
     } catch (err) {
-      console.error("DELHIVERY ERROR:", err);
       order.delivery = {
         provider: "delhivery",
-        status: "failed",
+        status: "pending",
+        retryCount: 0,
         error: err.message,
       };
     }
@@ -207,10 +232,19 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid order ID");
   }
 
-  const allowedStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+  const allowedStatuses = [
+    "pending",
+    "processing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
 
   if (!allowedStatuses.includes(status)) {
-    throw new ApiError(400, `Invalid status. Allowed: ${allowedStatuses.join(", ")}`);
+    throw new ApiError(
+      400,
+      `Invalid status. Allowed: ${allowedStatuses.join(", ")}`
+    );
   }
 
   const order = await Order.findById(id);
@@ -263,12 +297,16 @@ export const getAllOrders = asyncHandler(async (req, res) => {
   const total = await Order.countDocuments(query);
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      orders,
-      totalPages: Math.ceil(total / limit),
-      currentPage: Number(page),
-      totalOrders: total,
-    }, "All orders fetched")
+    new ApiResponse(
+      200,
+      {
+        orders,
+        totalPages: Math.ceil(total / limit),
+        currentPage: Number(page),
+        totalOrders: total,
+      },
+      "All orders fetched"
+    )
   );
 });
 
@@ -295,9 +333,7 @@ export const deleteOrder = asyncHandler(async (req, res) => {
 
   await order.deleteOne();
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, null, "Order deleted"));
+  return res.status(200).json(new ApiResponse(200, null, "Order deleted"));
 });
 
 /**
@@ -329,13 +365,17 @@ export const trackOrder = asyncHandler(async (req, res) => {
   }
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      orderId: order._id,
-      awb: order.delivery.awb,
-      status: order.status,
-      deliveryStatus: order.delivery.status,
-      trackingUrl: order.delivery.trackingUrl,
-    }, "Tracking info fetched")
+    new ApiResponse(
+      200,
+      {
+        orderId: order._id,
+        awb: order.delivery.awb,
+        status: order.status,
+        deliveryStatus: order.delivery.status,
+        trackingUrl: order.delivery.trackingUrl,
+      },
+      "Tracking info fetched"
+    )
   );
 });
 
@@ -360,7 +400,10 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   }
 
   if (["shipped", "delivered"].includes(order.status)) {
-    throw new ApiError(400, "Order already shipped/delivered. Cancel not allowed.");
+    throw new ApiError(
+      400,
+      "Order already shipped/delivered. Cancel not allowed."
+    );
   }
 
   order.status = "cancelled";
@@ -384,9 +427,9 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 
   await order.save();
 
-  return res.status(200).json(
-    new ApiResponse(200, order, "Order cancelled successfully")
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, order, "Order cancelled successfully"));
 });
 
 /**

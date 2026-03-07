@@ -231,8 +231,7 @@ export const createShipment = async (shipmentData) => {
       data: {
         packages: [{
           waybill: `MOCK${Date.now()}`,
-          status: "Success",
-          remarks: "Shipment created successfully (MOCK)"
+          status: "Success"
         }]
       }
     };
@@ -246,52 +245,53 @@ export const createShipment = async (shipmentData) => {
         pin: shipmentData.customerPincode,
         city: shipmentData.customerCity,
         state: shipmentData.customerState,
-        country: shipmentData.customerCountry || 'India',
+        country: shipmentData.customerCountry || "India",
         phone: shipmentData.customerPhone,
 
         order: shipmentData.orderNumber,
-        payment_mode: shipmentData.paymentMode || 'Prepaid',
+        payment_mode: shipmentData.paymentMode || "Prepaid",
+
         products_desc: shipmentData.productDescription,
         cod_amount: shipmentData.codAmount || 0,
-        order_date: shipmentData.orderDate || new Date().toISOString(),
+
+        // ✅ Correct date format
+        order_date: new Date().toISOString().split("T")[0],
+
         total_amount: shipmentData.totalAmount,
         quantity: shipmentData.quantity || 1,
 
-        waybill: shipmentData.waybill || '',
-        shipment_width: shipmentData.width || 0,
-        shipment_height: shipmentData.height || 0,
-        weight: shipmentData.weight,
+        weight: shipmentData.weight || 0.5,
 
-        return_pin: shipmentData.returnPincode || '',
-        return_city: shipmentData.returnCity || '',
-        return_phone: shipmentData.returnPhone || '',
-        return_add: shipmentData.returnAddress || '',
-        return_state: shipmentData.returnState || '',
-        return_country: shipmentData.returnCountry || 'India',
-
-        seller_add: shipmentData.sellerAddress,
         seller_name: shipmentData.sellerName,
-        seller_inv: shipmentData.invoiceNumber || '',
-        seller_gst_tin: shipmentData.sellerGST || '',
+        seller_add: shipmentData.sellerAddress,
 
-        hsn_code: shipmentData.hsnCode || '',
-        shipping_mode: shipmentData.shippingMode || 'Surface',
-        address_type: shipmentData.addressType || 'home'
+        shipping_mode: "Surface",
+        address_type: "home",
+
+        // ✅ Return address required
+        return_pin: shipmentData.customerPincode,
+        return_city: shipmentData.customerCity,
+        return_phone: shipmentData.customerPhone,
+        return_add: shipmentData.customerAddress,
+        return_state: shipmentData.customerState,
+        return_country: "India"
       }],
+
       pickup_location: {
         name: shipmentData.pickupLocationName
       }
     };
 
     const response = await axiosClient.post(
-      `/api/cmu/create.json`,
+      "/api/cmu/create.json",
       `format=json&data=${JSON.stringify(formatData)}`,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
     return { success: true, data: response.data };
+
   } catch (error) {
-    return handleError(error, 'Create Shipment');
+    return handleError(error, "Create Shipment");
   }
 };
 

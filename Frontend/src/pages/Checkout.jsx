@@ -47,16 +47,22 @@ export default function Checkout() {
     }
   };
 
-  useEffect(() => { fetchCart(); }, []);
+  useEffect(() => {
+    fetchCart();
+  }, []);
 
   const subtotal = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-    [cartItems]
+    () =>
+      cartItems.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0,
+      ),
+    [cartItems],
   );
 
   const totalWeight = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.quantity * 500, 0),
-    [cartItems]
+    [cartItems],
   );
 
   const total = subtotal + (shippingFee ?? 0);
@@ -73,7 +79,11 @@ export default function Checkout() {
 
   // ✅ isPincodeCheck: true = pincode change (full flow)
   //                   false = payment change (sirf cost recalculate)
-  const fetchShippingDetails = async (pincode, paymentMode, isPincodeCheck = false) => {
+  const fetchShippingDetails = async (
+    pincode,
+    paymentMode,
+    isPincodeCheck = false,
+  ) => {
     setShippingFeeLoading(true);
     setShippingFeeError("");
 
@@ -88,10 +98,10 @@ export default function Checkout() {
       if (isPincodeCheck) {
         const serviceRes = await checkServiceability(pincode);
         const resData = serviceRes.data;
+
         const serviceable =
-          resData?.serviceable != null
-            ? resData.serviceable
-            : (resData?.data?.delivery_codes?.length ?? 0) > 0;
+          resData?.data?.serviceable ??
+          (resData?.data?.delivery_codes?.length ?? 0) > 0;
 
         setPincodeServiceable(serviceable);
 
@@ -109,14 +119,14 @@ export default function Checkout() {
         weight: Math.max(totalWeight, 500),
         // ✅ Payment mode sahi pass karo — COD aur Prepaid rates alag hain
         paymentMode: paymentMode === "cod" ? "COD" : "Pre-paid",
-        collectableAmount: paymentMode === "cod" ? subtotal : 0,
+        collectableAmount: paymentMode === "cod" ? subtotal + shippingFee : 0,
         mode: "S",
       });
 
-      const costData = costRes.data;
+      const costData = costRes.data?.data;
 
-      if (costData?.success) {
-        const fee = costData.data?.totalAmount ?? null;
+      if (costRes.data?.success) {
+        const fee = costData?.totalAmount ?? null;
 
         if (fee !== null && fee >= 0) {
           const roundedFee = Math.round(fee);
@@ -124,13 +134,15 @@ export default function Checkout() {
           lastSuccessfulFee.current = roundedFee; // ✅ Save karo
         } else {
           // API ne 0 ya invalid diya — pichli fee use karo
-          const fallback = lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
+          const fallback =
+            lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
           setShippingFee(fallback);
           setShippingFeeError("Using estimated shipping cost.");
         }
       } else {
         // ✅ API fail — pichli successful fee use karo, 199 nahi
-        const fallback = lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
+        const fallback =
+          lastSuccessfulFee.current ?? (subtotal > 3000 ? 0 : 199);
         setShippingFee(fallback);
         if (!lastSuccessfulFee.current) {
           setShippingFeeError("Could not fetch live cost. Using estimate.");
@@ -272,8 +284,17 @@ export default function Checkout() {
 
         {/* Step Indicator */}
         <div className="flex items-center gap-6 mb-10 text-sm">
-          {[["1. Shipping", 1], ["2. Payment", 2], ["3. Review", 3]].map(([label, s]) => (
-            <span key={s} className={step === s ? "text-yellow-400 font-medium" : "text-gray-400"}>
+          {[
+            ["1. Shipping", 1],
+            ["2. Payment", 2],
+            ["3. Review", 3],
+          ].map(([label, s]) => (
+            <span
+              key={s}
+              className={
+                step === s ? "text-yellow-400 font-medium" : "text-gray-400"
+              }
+            >
               {label}
             </span>
           ))}
@@ -282,14 +303,44 @@ export default function Checkout() {
         {/* ── Step 1: Shipping ── */}
         {step === 1 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Full Name"    name="fullName" value={shipping.fullName} onChange={handleChange} />
-            <Input label="Phone Number" name="phone"    value={shipping.phone}    onChange={handleChange} />
-            <Input label="Address"      name="address"  value={shipping.address}  onChange={handleChange} />
-            <Input label="City"         name="city"     value={shipping.city}     onChange={handleChange} />
-            <Input label="State"        name="state"    value={shipping.state}    onChange={handleChange} />
+            <Input
+              label="Full Name"
+              name="fullName"
+              value={shipping.fullName}
+              onChange={handleChange}
+            />
+            <Input
+              label="Phone Number"
+              name="phone"
+              value={shipping.phone}
+              onChange={handleChange}
+            />
+            <Input
+              label="Address"
+              name="address"
+              value={shipping.address}
+              onChange={handleChange}
+            />
+            <Input
+              label="City"
+              name="city"
+              value={shipping.city}
+              onChange={handleChange}
+            />
+            <Input
+              label="State"
+              name="state"
+              value={shipping.state}
+              onChange={handleChange}
+            />
 
             <div>
-              <Input label="Pincode" name="pincode" value={shipping.pincode} onChange={handleChange} />
+              <Input
+                label="Pincode"
+                name="pincode"
+                value={shipping.pincode}
+                onChange={handleChange}
+              />
 
               {shipping.pincode.length === 6 && (
                 <div className="mt-2 text-sm space-y-1">
@@ -300,24 +351,36 @@ export default function Checkout() {
                     </span>
                   )}
                   {!shippingFeeLoading && pincodeServiceable === false && (
-                    <span className="text-red-400 text-xs">❌ Pincode not serviceable</span>
-                  )}
-                  {!shippingFeeLoading && pincodeServiceable === true && shippingFee !== null && (
-                    <span className="text-green-400 text-xs">
-                      ✓ Serviceable · Shipping: <strong>₹{shippingFee}</strong>
-                      {shippingFee === 0 && " (Free!)"}
+                    <span className="text-red-400 text-xs">
+                      ❌ Pincode not serviceable
                     </span>
                   )}
+                  {!shippingFeeLoading &&
+                    pincodeServiceable === true &&
+                    shippingFee !== null && (
+                      <span className="text-green-400 text-xs">
+                        ✓ Serviceable · Shipping:{" "}
+                        <strong>₹{shippingFee}</strong>
+                        {shippingFee === 0 && " (Free!)"}
+                      </span>
+                    )}
                   {!shippingFeeLoading && shippingFeeError && (
-                    <span className="text-yellow-400 text-xs block">{shippingFeeError}</span>
+                    <span className="text-yellow-400 text-xs block">
+                      {shippingFeeError}
+                    </span>
                   )}
                 </div>
               )}
             </div>
 
             <div className="md:col-span-2 mt-2">
-              <Button onClick={handleNextFromShipping} disabled={shippingFeeLoading}>
-                {shippingFeeLoading ? "Fetching Shipping..." : "Continue to Payment"}
+              <Button
+                onClick={handleNextFromShipping}
+                disabled={shippingFeeLoading}
+              >
+                {shippingFeeLoading
+                  ? "Fetching Shipping..."
+                  : "Continue to Payment"}
               </Button>
             </div>
           </div>
@@ -329,16 +392,27 @@ export default function Checkout() {
             <h2 className="text-lg font-medium mb-6">Select Payment Method</h2>
 
             <div className="mb-6 p-4 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-sm">
-              ℹ️ We recommend Razorpay for a smoother experience. COD is available but may have longer delivery times.
+              ℹ️ We recommend Razorpay for a smoother experience. COD is
+              available but may have longer delivery times.
             </div>
 
             <div className="space-y-4 mb-8">
               {[
                 { value: "cod", label: "Cash on Delivery" },
-                { value: "razorpay", label: "UPI / Card / Netbanking (Razorpay)" },
+                {
+                  value: "razorpay",
+                  label: "UPI / Card / Netbanking (Razorpay)",
+                },
               ].map(({ value, label }) => (
-                <label key={value} className="flex items-center gap-3 cursor-pointer">
-                  <input type="radio" checked={payment === value} onChange={() => setPayment(value)} />
+                <label
+                  key={value}
+                  className="flex items-center gap-3 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    checked={payment === value}
+                    onChange={() => setPayment(value)}
+                  />
                   <span>{label}</span>
                   {/* ✅ Live fee update dikhao jab payment switch karo */}
                   {shippingFeeLoading && (
@@ -354,7 +428,9 @@ export default function Checkout() {
             {/* ✅ Show updated shipping fee on payment step */}
             {shippingFee !== null && !shippingFeeLoading && (
               <div className="mb-6 p-3 bg-white/5 border border-white/10 text-sm text-gray-300 flex justify-between">
-                <span>Shipping charge ({payment === "cod" ? "COD" : "Online"})</span>
+                <span>
+                  Shipping charge ({payment === "cod" ? "COD" : "Online"})
+                </span>
                 <span className="text-yellow-400 font-medium">
                   {shippingFee === 0 ? "Free" : `₹${shippingFee}`}
                 </span>
@@ -363,13 +439,19 @@ export default function Checkout() {
 
             {payment === "razorpay" && (
               <p className="text-sm text-yellow-400 mb-6">
-                ℹ️ Payment will be processed first, then your order will be confirmed and shipped.
+                ℹ️ Payment will be processed first, then your order will be
+                confirmed and shipped.
               </p>
             )}
 
             <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              <Button onClick={handleNextFromPayment} disabled={shippingFeeLoading}>
+              <Button variant="outline" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <Button
+                onClick={handleNextFromPayment}
+                disabled={shippingFeeLoading}
+              >
                 {shippingFeeLoading ? "Updating..." : "Continue to Review"}
               </Button>
             </div>
@@ -383,12 +465,17 @@ export default function Checkout() {
               <h2 className="text-lg font-medium mb-4">Order Summary</h2>
               <div className="space-y-3 mb-6">
                 {cartItems.map((item) => (
-                  <div key={item.product._id} className="flex justify-between border border-white/10 p-3">
+                  <div
+                    key={item.product._id}
+                    className="flex justify-between border border-white/10 p-3"
+                  >
                     <div>
                       <p className="text-sm">{item.product.name}</p>
                       <p className="text-xs text-gray-400">× {item.quantity}</p>
                     </div>
-                    <p className="text-yellow-400 text-sm">₹{(item.product.price * item.quantity).toLocaleString()}</p>
+                    <p className="text-yellow-400 text-sm">
+                      ₹{(item.product.price * item.quantity).toLocaleString()}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -401,44 +488,64 @@ export default function Checkout() {
                 <div className="flex justify-between">
                   <span>Shipping ({payment === "cod" ? "COD" : "Online"})</span>
                   <span>
-                    {shippingFee === 0
-                      ? <span className="text-green-400">Free</span>
-                      : `₹${shippingFee}`}
+                    {shippingFee === 0 ? (
+                      <span className="text-green-400">Free</span>
+                    ) : (
+                      `₹${shippingFee}`
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between font-semibold text-base border-t border-white/10 pt-2 text-white">
                   <span>Total</span>
-                  <span className="text-yellow-400">₹{total.toLocaleString()}</span>
+                  <span className="text-yellow-400">
+                    ₹{total.toLocaleString()}
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="border border-white/10 p-6 h-fit space-y-5">
               <div>
-                <h2 className="font-medium mb-2 text-sm text-gray-400 uppercase tracking-wider">Shipping Details</h2>
+                <h2 className="font-medium mb-2 text-sm text-gray-400 uppercase tracking-wider">
+                  Shipping Details
+                </h2>
                 <p className="text-sm text-gray-300 leading-relaxed">
-                  {shipping.fullName}, {shipping.phone}<br />
-                  {shipping.address}, {shipping.city}, {shipping.state} — {shipping.pincode}
+                  {shipping.fullName}, {shipping.phone}
+                  <br />
+                  {shipping.address}, {shipping.city}, {shipping.state} —{" "}
+                  {shipping.pincode}
                 </p>
               </div>
 
               <div>
-                <h2 className="font-medium mb-1 text-sm text-gray-400 uppercase tracking-wider">Payment</h2>
+                <h2 className="font-medium mb-1 text-sm text-gray-400 uppercase tracking-wider">
+                  Payment
+                </h2>
                 <p className="text-sm text-gray-300">
-                  {payment === "cod" ? "Cash on Delivery" : "Razorpay (UPI / Card / Netbanking)"}
+                  {payment === "cod"
+                    ? "Cash on Delivery"
+                    : "Razorpay (UPI / Card / Netbanking)"}
                 </p>
                 {payment === "razorpay" && (
-                  <p className="text-xs text-yellow-400 mt-1">You will be redirected to Razorpay to complete payment.</p>
+                  <p className="text-xs text-yellow-400 mt-1">
+                    You will be redirected to Razorpay to complete payment.
+                  </p>
                 )}
                 {payment === "cod" && (
-                  <p className="text-xs text-gray-500 mt-1">Pay ₹{total.toLocaleString()} at delivery.</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Pay ₹{total.toLocaleString()} at delivery.
+                  </p>
                 )}
               </div>
 
               <div className="flex gap-3 pt-2">
-                <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
+                <Button variant="outline" onClick={() => setStep(2)}>
+                  Back
+                </Button>
                 <Button onClick={placeOrder}>
-                  {payment === "cod" ? "Place Order" : `Pay ₹${total.toLocaleString()}`}
+                  {payment === "cod"
+                    ? "Place Order"
+                    : `Pay ₹${total.toLocaleString()}`}
                 </Button>
               </div>
             </div>

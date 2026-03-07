@@ -18,7 +18,7 @@ const orderItemSchema = new mongoose.Schema(
       type: Number,
       required: true, // snapshot of price at order time
     },
-    qty: { 
+    qty: {
       type: Number,
       required: true,
       min: 1,
@@ -79,14 +79,18 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
-    
+
     delivery: {
       provider: { type: String, default: "delhivery" },
       awb: { type: String },
-      status: { 
-        type: String, 
+      status: {
+        type: String,
         enum: ["pending", "in_transit", "delivered", "failed"],
-        default: "pending" 
+        default: "pending",
+      },
+      retryCount: {
+        type: Number,
+        default: 0,
       },
       trackingUrl: { type: String },
       error: { type: String },
