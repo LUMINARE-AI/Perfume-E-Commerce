@@ -296,7 +296,7 @@ export default function Home() {
 
         {/* ✅ FIX 1 (MAIN BUG): touch-pan-x for horizontal scroll containers, NOT touch-pan-y */}
         {/* Mobile: Snap Scroll */}
-        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
           <div className="flex gap-4 px-4 sm:px-6 pb-4">
             {productsLoading
               ? Array(4).fill(0).map((_, i) => (
@@ -349,7 +349,7 @@ export default function Home() {
         </h2>
 
         {/* ✅ FIX 1: touch-pan-x for horizontal scroll, and only show on mobile */}
-        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
           <div className="flex gap-4 px-4 sm:px-6 pb-4">
             {categories.map((cat) => (
               <Link
@@ -455,7 +455,7 @@ export default function Home() {
           </h2>
 
           {/* ✅ FIX 1: touch-pan-x for horizontal scroll */}
-          <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory touch-pan-x">
+          <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
             <div className="flex gap-4 px-4 sm:px-6 pb-4">
               {reviews.map((review, i) => (
                 <div
