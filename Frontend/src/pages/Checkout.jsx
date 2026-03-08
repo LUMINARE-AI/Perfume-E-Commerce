@@ -119,7 +119,8 @@ export default function Checkout() {
         weight: Math.max(totalWeight, 500),
         // ✅ Payment mode sahi pass karo — COD aur Prepaid rates alag hain
         paymentMode: paymentMode === "cod" ? "COD" : "Pre-paid",
-        collectableAmount: paymentMode === "cod" ? subtotal + shippingFee : 0,
+        collectableAmount:
+          paymentMode === "cod" ? subtotal + (shippingFee ?? 0) : 0,
         mode: "S",
       });
 
@@ -359,8 +360,7 @@ export default function Checkout() {
                     pincodeServiceable === true &&
                     shippingFee !== null && (
                       <span className="text-green-400 text-xs">
-                        ✓ Serviceable · Shipping:{" "}
-                        <strong>₹{shippingFee}</strong>
+                        ✓ Serviceable
                         {shippingFee === 0 && " (Free!)"}
                       </span>
                     )}
