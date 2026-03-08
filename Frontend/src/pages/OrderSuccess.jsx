@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getOrderByIdApi } from "../api/orders";
-import { downloadInvoiceFile } from "../api/invoice";
 import { getTAT } from "../api/delhivery";
 import Button from "../components/ui/Button";
 import {
