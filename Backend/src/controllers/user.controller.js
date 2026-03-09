@@ -430,7 +430,7 @@ const forgotPassword = async (req, res) => {
 
           <div class="header">
             <div class="brand">BinKhalid</div>
-            <div class="brand-sub">Parfumerie de Luxe</div>
+            <div class="brand-sub">Epitome Of Perfume</div>
           </div>
 
           <div class="content">
