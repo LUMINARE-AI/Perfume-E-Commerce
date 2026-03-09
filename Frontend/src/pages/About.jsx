@@ -1,3 +1,4 @@
+import OudAlKhalid from "../assets/OudAlKhalid.png";
 export default function About() {
   return (
     <main className="bg-black mt-14 min-h-screen text-white">
@@ -21,7 +22,7 @@ export default function About() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <img
-            src="https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?q=80&w=1200&auto=format&fit=crop"
+            src={OudAlKhalid}
             alt="Our Story"
             className="w-full h-80 object-cover border border-white/10"
           />

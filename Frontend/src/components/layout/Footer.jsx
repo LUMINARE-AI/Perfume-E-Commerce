@@ -26,7 +26,7 @@ export default function Footer() {
                 BinKhalid
               </h2>
               <p className="text-[10px] tracking-[0.4em] text-white/40 uppercase font-light">
-                Parfumerie de Luxe
+                Epitome Of Perfume
               </p>
               <div 
                 className="mt-3 h-px w-20 bg-linear-to-r from-[#D4AF37] to-transparent"
@@ -60,7 +60,7 @@ export default function Footer() {
                   className="transition-colors duration-300 group-hover:text-[#D4AF37]" 
                   size={16} 
                 />
-                <span className="font-light">binkhalid0401@gmail.com</span>
+                <span className="font-light">contact@binkhalid.in</span>
               </div>
             </div>
           </div>
@@ -131,9 +131,9 @@ export default function Footer() {
               </p>
               <div className="flex gap-4">
                 {[
-                  { Icon: FiInstagram, href: "https://instagram.com", label: "Instagram" },
-                  { Icon: FiFacebook, href: "https://facebook.com", label: "Facebook" },
-                  { Icon: FiTwitter, href: "https://twitter.com", label: "Twitter" },
+                  { Icon: FiInstagram, href: "https://www.instagram.com/binkhalid_perfumes/", label: "Instagram" },
+                  { Icon: FiFacebook, href: "https://www.facebook.com/binkhalidperfumes", label: "Facebook" },
+                  { Icon: FiTwitter, href: "https://twitter.com/binkhalid_perf", label: "Twitter" },
                 // eslint-disable-next-line no-unused-vars
                 ].map(({ Icon, href, label }) => (
                   <a
@@ -164,44 +164,17 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-gray-500 text-sm">
           <div className="flex flex-col md:flex-row items-center gap-6">
             <p className="font-light tracking-wide">
-              © {new Date().getFullYear()} BinKhalid Parfumerie. All rights reserved.
+              © {new Date().getFullYear()} BinKhalid Perfumes. All rights reserved.
             </p>
-            <div className="flex items-center gap-4 text-xs">
-              <Link 
-                to="/terms" 
-                className="hover:text-[#D4AF37] transition-colors duration-300 font-light"
-              >
-                Terms
-              </Link>
-              <span className="text-gray-700">•</span>
-              <Link 
-                to="/privacy" 
-                className="hover:text-[#D4AF37] transition-colors duration-300 font-light"
-              >
-                Privacy
-              </Link>
-              <span className="text-gray-700">•</span>
-              <Link 
-                to="/cookies" 
-                className="hover:text-[#D4AF37] transition-colors duration-300 font-light"
-              >
-                Cookies
-              </Link>
-            </div>
           </div>
 
-          {/* Payment Methods */}
+          {/* Developed By */}
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-600 uppercase tracking-wider font-light">We Accept:</span>
+            <span className="text-xs text-gray-600 uppercase tracking-wider font-light">Developed By</span>
             <div className="flex items-center gap-2">
-              {["VISA", "MC", "AMEX", "PAYPAL"].map((method) => (
-                <div
-                  key={method}
-                  className="px-2 py-1 bg-white/5 border border-white/10 text-[10px] text-gray-500 font-semibold tracking-wide hover:border-[#D4AF37]/50 hover:text-[#D4AF37] transition-all duration-300"
-                >
-                  {method}
-                </div>
-              ))}
+              <a href="https://www.linkedin.com/in/aditya-jain-050159327/" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-[#D4AF37] transition-colors duration-300">
+                Aditya Jain
+              </a>
             </div>
           </div>
         </div>

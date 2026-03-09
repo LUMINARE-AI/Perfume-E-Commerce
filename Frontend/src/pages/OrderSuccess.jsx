@@ -420,7 +420,7 @@ export default function OrderSuccess() {
         {/* Help */}
         <div className="text-center text-gray-400 text-sm">
           Need help? Contact us at{" "}
-          <span className="text-yellow-400">support@binkhalid.com</span>
+          <span className="text-yellow-400">contact@binkhalid.com</span>
         </div>
       </div>
     </main>

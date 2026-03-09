@@ -2,48 +2,48 @@ import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import ProductCard from "../components/ui/ProductCard";
 import { FiArrowRight, FiTruck, FiRotateCw, FiDollarSign, FiShield } from "react-icons/fi";
+import MoonGlow from "../assets/MoonGlow.png";
+import Florence from "../assets/Florence.png";
+import BlackNoir from "../assets/BlackNoir.png";
+import OudAlAhad from "../assets/OudAlAhad.png";
+import OudAlKhalid from "../assets/OudAlKhalid.png";
 import api from "../api/axios";
 
 const heroSlides = [
   {
-    image:
-      "https://images.unsplash.com/photo-1718466044521-d38654f3ba0a?q=80&w=1073&auto=format&fit=crop",
+    image: MoonGlow,
     title: "Discover Your Signature",
-    titleGold: "Luxury Fragrance",
+    titleGold: "Moon Glow",
     description:
-      "Explore our curated collection of premium perfumes crafted to leave a lasting impression.",
+      "A luminous fragrance crafted for those who shine effortlessly with elegance and charm.",
   },
   {
-    image:
-      "https://images.unsplash.com/photo-1594035910387-fea47794261f?q=80&w=1332&auto=format&fit=crop",
-    title: "Timeless Elegance",
-    titleGold: "In Every Bottle",
+    image: BlackNoir,
+    title: "Mystery of",
+    titleGold: "Black Noir",
     description:
-      "Experience the art of perfumery with our exclusive Oud Royale collection.",
+      "Dark, bold, and irresistible — a fragrance for those who command attention.",
   },
   {
-    image:
-      "https://plus.unsplash.com/premium_photo-1667161521640-bba57df66f29?q=80&w=1171&auto=format&fit=crop",
-    title: "Captivate with",
-    titleGold: "Velvet Rose",
+    image: Florence,
+    title: "Elegance Inspired by",
+    titleGold: "Florence",
     description:
-      "Delicate floral notes blended with modern sophistication for the refined individual.",
+      "A refined floral fragrance capturing the timeless beauty and romance of Italian artistry.",
   },
   {
-    image:
-      "https://images.unsplash.com/photo-1458538977777-0549b2370168?q=80&w=1174&auto=format&fit=crop",
-    title: "Intense & Unforgettable",
-    titleGold: "Musk Collection",
+    image: OudAlAhad,
+    title: "The Royal Essence of",
+    titleGold: "Oud Al Ahad",
     description:
       "Bold, long-lasting fragrances that make a statement wherever you go.",
   },
   {
-    image:
-      "https://images.unsplash.com/photo-1588514912908-8f5891714f8d?q=80&w=1169&auto=format&fit=crop",
-    title: "Luxury Gift Sets",
-    titleGold: "Perfect for Every Occasion",
+    image: OudAlKhalid,
+    title: "Legacy of",
+    titleGold: "Oud AlKhalid",
     description:
-      "Curated collections beautifully packaged for those who appreciate the finer things.",
+      "Deep oriental notes crafted for those who appreciate timeless sophistication.",
   },
 ];
 
@@ -77,15 +77,15 @@ const categories = [
 const reviews = [
   {
     name: "Ayaan Khan",
-    text: "Absolutely luxurious fragrance. The Oud Royale lasts all day and feels premium. Highly recommended!",
+    text: "Absolutely luxurious fragrance. The Oud Al Ahad lasts full week and feels premium. Highly recommended!",
   },
   {
     name: "Sara Mehta",
-    text: "The packaging, the scent, the experience — everything feels high-end. Loved the Velvet Rose.",
+    text: "The packaging, the scent, the experience — everything feels high-end. Loved the Florence.",
   },
   {
     name: "Rahul Verma",
-    text: "Finally found a perfume brand that feels exclusive. Musk Intense is now my signature scent.",
+    text: "Finally found a perfume brand that feels exclusive. Oud Al Ahad is now my signature scent.",
   },
 ];
 
@@ -262,8 +262,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
             {[
-              { icon: FiTruck, title: "Free Shipping", sub: "Orders above ₹999" },
-              { icon: FiRotateCw, title: "Easy Returns", sub: "7-day return policy" },
+              { icon: FiTruck, title: "Secured Shipping", sub: "Delivered safely to your doorstep" },
+              { icon: FiRotateCw, title: "Extra Discount", sub: "On UPI Payments" },
               { icon: FiDollarSign, title: "COD Available", sub: "Pay on delivery" },
               { icon: FiShield, title: "Secure Payments", sub: "100% safe checkout" },
             ].map((feature, i) => (
@@ -437,7 +437,7 @@ export default function Home() {
             {/* ✅ FIX 6: h-80 on mobile, h-96 on md, fixed height on lg instead of non-existent h-125 */}
             <div className="order-1 lg:order-2 relative h-64 sm:h-80 md:h-96 lg:h-125 overflow-hidden border border-white/10">
               <img
-                src="https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?q=80&w=1200&auto=format&fit=crop"
+                src={OudAlKhalid}
                 alt="Brand Story"
                 className="absolute inset-0 w-full h-full object-cover"
               />

@@ -154,9 +154,9 @@ export default function Navbar() {
             <p className="text-center text-[10px] lg:text-xs tracking-[0.25em] font-light text-white/80">
               <span className="inline-flex items-center gap-2">
                 <span className="text-[#D4AF37]">★</span>
-                <span>COMPLIMENTARY SHIPPING ON ORDERS OVER ₹999</span>
+                <span>Get Extra Benefits on UPI payments</span>
                 <span className="hidden md:inline text-[#D4AF37] mx-2">•</span>
-                <span className="hidden md:inline">LUXURY GIFT WRAPPING AVAILABLE</span>
+                <span className="hidden md:inline">Secure & Fast Delivery</span>
                 <span className="text-[#D4AF37]">★</span>
               </span>
             </p>
@@ -181,7 +181,7 @@ export default function Navbar() {
                 />
               </div>
               <p className="text-[9px] tracking-[0.4em] text-white/40 text-center mt-1 font-light uppercase">
-                Parfumerie de Luxe
+                Epitome Of Perfume
               </p>
             </Link>
 
@@ -404,12 +404,12 @@ export default function Navbar() {
           <div className="border-t border-[#D4AF37]/20 px-6 py-6 space-y-6">
             <div className="space-y-3">
               <p className="text-white/40 text-xs tracking-[0.2em] uppercase">Contact</p>
-              <p className="text-white/60 text-sm">contact@binkhalid.com</p>
-              <p className="text-white/60 text-sm">+91 XXXXX XXXXX</p>
+              <p className="text-white/60 text-sm">contact@binkhalid.in</p>
+              <p className="text-white/60 text-sm">+91 84326 66699</p>
             </div>
             <div className="pt-4 border-t border-white/5">
               <p className="text-white/30 text-[10px] tracking-widest uppercase">
-                © {new Date().getFullYear()} BinKhalid Parfumerie
+                © {new Date().getFullYear()} BinKhalid Perfumes
               </p>
             </div>
           </div>

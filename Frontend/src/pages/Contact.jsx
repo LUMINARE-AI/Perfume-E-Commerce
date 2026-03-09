@@ -77,7 +77,7 @@ Message: ${form.message}`;
           <div className="space-y-4 text-gray-300">
             <p>
               <span className="text-gray-400">Email:</span>{" "}
-              binkhalid0401@gmail.com 
+              contact@binkhalid.in 
             </p>
             <p>
               <span className="text-gray-400">Phone:</span>{" "}
