@@ -54,7 +54,7 @@ export default function Register() {
         localStorage.setItem("user", JSON.stringify(user));
       }
 
-      navigate("/products");
+      navigate("/login");
     } catch (err) {
       console.error(err);
       setError(
