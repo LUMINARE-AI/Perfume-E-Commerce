@@ -1,13 +1,21 @@
 import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT),
-  secure: Number(process.env.EMAIL_PORT) === 465, 
+  host: "smtp.titan.email",
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
+});
+
+transporter.verify(function (error, success) {
+  if (error) {
+    console.log("SMTP Error:", error);
+  } else {
+    console.log("✅ SMTP server is ready to send emails");
+  }
 });
 
 const sendEmail = async ({ to, subject, html }) => {
@@ -20,8 +28,6 @@ const sendEmail = async ({ to, subject, html }) => {
     });
 
     console.log("✅ Email sent:", info.messageId);
-    return { success: true };
-
   } catch (error) {
     console.error("❌ Email sending failed:", error);
     throw new Error("Failed to send email");
