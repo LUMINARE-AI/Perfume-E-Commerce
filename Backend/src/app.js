@@ -19,6 +19,7 @@ const allowedOrigins = [
   "http://localhost:3000",
   "https://binkhalid.in",
   "https://www.binkhalid.in",
+  "https://perfume-e-commerce.vercel.app",
 ];
 
 app.use(

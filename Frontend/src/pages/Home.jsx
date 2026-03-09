@@ -47,32 +47,6 @@ const heroSlides = [
   },
 ];
 
-const categories = [
-  {
-    title: "For Men",
-    image:
-      "https://images.unsplash.com/photo-1619995745882-f4128ac82ad6?q=80&w=800&auto=format&fit=crop",
-    link: "/products?category=men",
-  },
-  {
-    title: "For Women",
-    image:
-      "https://images.unsplash.com/photo-1585386959984-a4155224a1b1?q=80&w=800&auto=format&fit=crop",
-    link: "/products?category=women",
-  },
-  {
-    title: "Oud Collection",
-    image:
-      "https://images.unsplash.com/photo-1615634260167-c8cd1c5f3c5b?q=80&w=800&auto=format&fit=crop",
-    link: "/products?category=oud",
-  },
-  {
-    title: "Gift Sets",
-    image:
-      "https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?q=80&w=800&auto=format&fit=crop",
-    link: "/products?category=gifts",
-  },
-];
 
 const reviews = [
   {
@@ -341,64 +315,7 @@ export default function Home() {
             )}
         </div>
       </section>
-
-      {/* ───────────────── EXPLORE COLLECTIONS ───────────────── */}
-      <section className="max-w-7xl mx-auto pb-16 md:pb-20">
-        <h2 className="text-xl md:text-3xl font-serif text-white mb-6 md:mb-10 px-4 sm:px-6">
-          Explore Collections
-        </h2>
-
-        {/* ✅ FIX 1: touch-pan-x for horizontal scroll, and only show on mobile */}
-        <div className="md:hidden overflow-x-auto scrollbar-hide snap-x snap-mandatory">
-          <div className="flex gap-4 px-4 sm:px-6 pb-4">
-            {categories.map((cat) => (
-              <Link
-                key={cat.title}
-                to={cat.link}
-                className="group relative h-56 overflow-hidden border border-white/10 shrink-0 snap-start snap-always rounded-sm"
-                style={{ width: "calc(100vw - 5rem)" }}
-              >
-                <img
-                  src={cat.image}
-                  alt={cat.title}
-                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                />
-                <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition" />
-                <div className="relative z-10 h-full flex items-center justify-center">
-                  <h3 className="text-lg font-serif text-white group-hover:text-yellow-400 transition">
-                    {cat.title}
-                  </h3>
-                </div>
-              </Link>
-            ))}
-            <div className="shrink-0 w-4" aria-hidden="true" />
-          </div>
-        </div>
-
-        {/* ✅ FIX 7: Desktop grid — only shown on md+ */}
-        <div className="hidden md:grid grid-cols-4 gap-6 px-6">
-          {categories.map((cat) => (
-            <Link
-              key={cat.title}
-              to={cat.link}
-              className="group relative h-60 overflow-hidden border border-white/10"
-            >
-              <img
-                src={cat.image}
-                alt={cat.title}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition duration-500"
-              />
-              <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition" />
-              <div className="relative z-10 h-full flex items-center justify-center">
-                <h3 className="text-xl font-serif text-white group-hover:text-yellow-400 transition">
-                  {cat.title}
-                </h3>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
+      
       {/* ───────────────── BRAND STORY ───────────────── */}
       <section className="py-16 md:py-24 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">

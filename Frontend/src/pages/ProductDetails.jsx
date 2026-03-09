@@ -567,8 +567,8 @@ export default function ProductDetails() {
               </div>
               <div className="flex flex-col items-center text-center gap-1 py-2">
                 <FiTruck className="text-yellow-400" size={18} />
-                <p className="font-medium text-xs">Free Ship</p>
-                <p className="text-gray-400 text-xs leading-tight">Above ₹999</p>
+                <p className="font-medium text-xs">Secure Shipping</p>
+                <p className="text-gray-400 text-xs leading-tight">Delivered safely to your doorstep</p>
               </div>
               <div className="flex flex-col items-center text-center gap-1 py-2">
                 <FiShield className="text-yellow-400" size={18} />
