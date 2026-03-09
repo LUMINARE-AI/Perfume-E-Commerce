@@ -5,6 +5,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import * as jwt from "jsonwebtoken";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
+import bcrypt from "bcryptjs";
 
 export const getMe = asyncHandler(async (req, res) => {
   return res.status(200).json(

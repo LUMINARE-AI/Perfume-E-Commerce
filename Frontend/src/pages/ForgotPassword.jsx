@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
@@ -10,6 +10,17 @@ export default function ForgotPassword() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -19,8 +30,10 @@ export default function ForgotPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!email.trim()) {
-      showToast("Please enter your email address.", "error");
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(email)) {
+      showToast("Please enter a valid email address.", "error");
       return;
     }
 
@@ -28,6 +41,7 @@ export default function ForgotPassword() {
       setLoading(true);
       await api.post("/users/forgot-password", { email });
       setSubmitted(true);
+      setCooldown(60);
     } catch (err) {
       const status = err?.response?.status;
       const message = err?.response?.data?.message;
@@ -37,7 +51,10 @@ export default function ForgotPassword() {
       } else if (status === 429) {
         showToast("Too many requests. Please try again later.", "error");
       } else {
-        showToast(message || "Something went wrong. Please try again.", "error");
+        showToast(
+          message || "Something went wrong. Please try again.",
+          "error",
+        );
       }
     } finally {
       setLoading(false);
@@ -46,7 +63,6 @@ export default function ForgotPassword() {
 
   return (
     <main className="bg-black min-h-screen flex items-center justify-center px-4">
-
       {/* Toast */}
       {toast && (
         <div className="fixed top-6 left-2 right-2 md:left-auto md:right-4 md:max-w-sm z-50">
@@ -68,7 +84,6 @@ export default function ForgotPassword() {
       )}
 
       <div className="w-full max-w-md border border-white/10 p-8 text-white">
-
         {submitted ? (
           /* ── Success State ── */
           <div className="text-center py-4">
@@ -117,14 +132,16 @@ export default function ForgotPassword() {
 
               <Button
                 type="submit"
+                disabled={loading || cooldown > 0}
                 className="w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
               >
                 {loading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                     <span>Sending...</span>
                   </>
+                ) : cooldown > 0 ? (
+                  `Wait ${cooldown}s`
                 ) : (
                   "Send Reset Link"
                 )}

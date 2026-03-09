@@ -104,7 +104,7 @@ export default function Footer() {
                 { to: "/terms", label: "Terms & Conditions" },
                 { to: "/policy", label: "Privacy Policy" },
                 { to: "/refund-policy", label: "Returns & Refunds" },
-                { to: "/track", label: "Track Order" },
+                { to: "/https://www.delhivery.com/", label: "Track Order" },
                 { to: "/contact", label: "Customer Support" },
               ].map((link) => (
                 <li key={link.to}>

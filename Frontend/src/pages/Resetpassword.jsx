@@ -42,7 +42,7 @@ export default function ResetPassword() {
 
     try {
       setLoading(true);
-      await api.post(`/auth/reset-password/${token}`, { newPassword: password });
+      await api.post(`/users/reset-password/${token}`, { newPassword: password });
       setSuccess(true);
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
