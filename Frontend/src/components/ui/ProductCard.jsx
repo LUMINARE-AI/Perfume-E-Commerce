@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function ProductCard({ product }) {
-  // ✅ Fix: Backend returns 'images' array and '_id', not 'image' and 'id'
+  const navigate = useNavigate(); 
+  
   const imageUrl = product?.images?.[0]?.url || product?.image || "/placeholder.jpg";
   const productId = product?._id || product?.id;
 
@@ -13,7 +14,6 @@ export default function ProductCard({ product }) {
           alt={product.name}
           className="w-full h-56 object-cover transform group-hover:scale-105 transition"
           onError={(e) => {
-            // Fallback to placeholder if image fails to load
             e.target.src = "/placeholder.jpg";
           }}
         />
@@ -29,7 +29,7 @@ export default function ProductCard({ product }) {
           <span className="text-yellow-400 font-semibold">
             ₹{product.price?.toLocaleString()}
           </span>
-          <button className="text-xs border border-yellow-400 text-yellow-400 px-3 py-1 hover:bg-yellow-400 hover:text-black transition">
+          <button onClick={() => navigate(`/products/${productId}`)} className="text-xs border border-yellow-400 text-yellow-400 px-3 py-1 hover:bg-yellow-400 hover:text-black transition"> {/* ✅ Fix 2: onClick */}
             View
           </button>
         </div>
