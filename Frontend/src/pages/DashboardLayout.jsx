@@ -1,44 +1,173 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import {
+  FiUser,
+  FiShoppingBag,
+  FiMapPin,
+  FiLock,
+  FiLogOut,
+} from "react-icons/fi";
+import { logout } from "../utils/authUtils";
+
+const navItems = [
+  { to: "/dashboard/profile",  icon: FiUser,        label: "Profile"    },
+  { to: "/dashboard/orders",   icon: FiShoppingBag, label: "My Orders"  },
+  { to: "/dashboard/address",  icon: FiMapPin,      label: "Addresses"  },
+  { to: "/dashboard/security", icon: FiLock,        label: "Security"   },
+];
 
 export default function DashboardLayout() {
-  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const [showConfirm, setShowConfirm] = useState(false);
 
-  const links = [
-    { to: "/dashboard/profile", label: "Profile" },
-    { to: "/dashboard/orders", label: "My Orders" },
-    { to: "/dashboard/address", label: "Addresses" },
-    { to: "/dashboard/security", label: "Security" },
-  ];
+  const handleLogout  = () => setShowConfirm(true);
+  const confirmLogout = () => logout(navigate, "/");
+  const cancelLogout  = () => setShowConfirm(false);
 
   return (
-    <main className="bg-black min-h-screen pt-20 pb-12">
-      <div className="max-w-6xl mx-auto px-6 text-white grid grid-cols-1 md:grid-cols-4 gap-8">
-        
-        {/* Sidebar */}
-        <aside className="border border-white/10 p-4 h-fit">
-          <h2 className="font-serif text-xl mb-4">My Account</h2>
-          <nav className="space-y-2">
-            {links.map((link) => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className={`block px-3 py-2 border ${
-                  pathname === link.to
-                    ? "border-yellow-400 text-yellow-400"
-                    : "border-white/10 text-gray-300 hover:border-yellow-400 hover:text-yellow-400"
-                }`}
-              >
-                {link.label}
-              </Link>
+    <div className="min-h-screen mt-12 pt-6 bg-black text-white">
+
+      {/* ── Mobile Top Header ── */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-black border-b border-white/10">
+        <div className="flex items-center px-4 h-14">
+          <h2 className="text-lg font-serif text-yellow-400 tracking-tight">
+            My Account
+          </h2>
+        </div>
+      </header>
+
+      <div className="flex">
+        {/* ── Desktop Sidebar ── */}
+        <aside className="hidden pt-2 mt-30 md:flex flex-col fixed left-0 top-0 bottom-0 w-64 border-r border-white/10 bg-black/60 backdrop-blur-xl z-30">
+          <div className="p-4 border-b border-white/10">
+            <h2 className="text-2xl font-serif text-yellow-400 tracking-tight">
+              My Account
+            </h2>
+          </div>
+
+          <nav className="mt-4 space-y-2 flex-1">
+            {navItems.map((item) => (
+              <DesktopNavItem key={item.to} to={item.to} icon={<item.icon />}>
+                {item.label}
+              </DesktopNavItem>
             ))}
           </nav>
+
+          <div className="p-4 border-t border-white/10">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-400 hover:text-red-400 hover:bg-white/5 transition border border-transparent hover:border-red-400/30"
+            >
+              <FiLogOut />
+              <span>Logout</span>
+            </button>
+          </div>
         </aside>
 
-        {/* Content */}
-        <section className="md:col-span-3">
-          <Outlet />
-        </section>
+        {/* ── Main Content ── */}
+        <main className="flex-1 md:ml-64 min-h-screen bg-linear-to-br from-black via-black to-zinc-900">
+          <div className="pt-4 pb-20 md:pt-0 md:pb-0 p-4 md:p-8">
+            <Outlet />
+          </div>
+        </main>
       </div>
-    </main>
+
+      {/* ── Mobile Bottom Tab Bar ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-xl border-t border-white/10">
+        <div className="flex items-stretch h-16">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-all duration-200 relative
+                ${isActive ? "text-yellow-400" : "text-gray-500 hover:text-gray-300"}`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-yellow-400 rounded-full" />
+                  )}
+                  <span
+                    className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
+                      isActive ? "bg-yellow-400/10" : ""
+                    }`}
+                  >
+                    <item.icon size={18} strokeWidth={isActive ? 2 : 1.5} />
+                  </span>
+                  <span>{item.label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+
+          {/* Logout tab */}
+          <button
+            onClick={handleLogout}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-[10px] font-medium text-gray-500 active:text-red-400 transition-all duration-200 relative border-l border-white/5"
+          >
+            <span className="flex items-center justify-center w-8 h-8 rounded-full active:bg-red-400/10 transition-all duration-200">
+              <FiLogOut size={18} strokeWidth={1.5} />
+            </span>
+            <span>Logout</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Logout Confirm Popup ── */}
+      {showConfirm && (
+        <div className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm animate-slideUp">
+          <div className="bg-zinc-900 border border-white/10 shadow-2xl shadow-black/60 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <FiLogOut size={16} className="text-red-400 shrink-0" />
+              <p className="text-sm text-white font-light">
+                Are you sure you want to logout?
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={cancelLogout}
+                className="px-3 py-1.5 text-xs text-gray-400 border border-white/10 hover:border-white/30 hover:text-white transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-3 py-1.5 text-xs text-black bg-red-400 hover:bg-red-500 transition font-medium"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+          to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        .animate-slideUp { animation: slideUp 0.2s ease-out; }
+      `}</style>
+    </div>
+  );
+}
+
+function DesktopNavItem({ to, icon, children }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-4 py-3 text-sm transition-all group ${
+          isActive
+            ? "border border-yellow-400 text-yellow-400 bg-yellow-400/5 shadow-lg shadow-yellow-400/10"
+            : "border border-white/10 text-gray-300 hover:border-yellow-400/50 hover:text-yellow-400 hover:bg-white/5"
+        }`
+      }
+    >
+      <span className="group-hover:scale-110 transition-transform">{icon}</span>
+      <span className="font-medium">{children}</span>
+    </NavLink>
   );
 }

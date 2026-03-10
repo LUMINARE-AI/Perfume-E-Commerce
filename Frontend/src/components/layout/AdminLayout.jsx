@@ -25,7 +25,7 @@ export default function AdminLayout() {
   const cancelLogout = () => setShowConfirm(false);
 
   return (
-    <div className="min-h-screen mt-15 pt-6 bg-black text-white">
+    <div className="min-h-screen mt-12 pt-6 bg-black text-white">
       {/* ── Mobile Top Header (no logout here — it's in tab bar now) ── */}
       <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-black border-b border-white/10">
         <div className="flex items-center px-4 h-14">

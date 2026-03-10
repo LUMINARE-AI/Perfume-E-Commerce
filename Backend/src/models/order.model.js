@@ -100,6 +100,22 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    razorpayPaymentId: {
+      type: String, 
+    },
+
+    cancellationReason: {
+      type: String,
+    },
+
+    refund: {
+      refundId: { type: String },
+      status: { type: String },
+      amount: { type: Number },
+      initiatedAt: { type: Date },
+    },
+
     paidAt: {
       type: Date,
     },

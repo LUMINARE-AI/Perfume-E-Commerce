@@ -4,6 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import mongoose from "mongoose";
 import { createShipment } from "../services/delhivery.service.js";
+import { razorpay } from "../services/razorpay.service.js"; // ← ADD KARO
 
 export const createOrder = asyncHandler(async (req, res) => {
   const user = await req.user.populate("cart.product");
@@ -381,55 +382,76 @@ export const trackOrder = asyncHandler(async (req, res) => {
 
 export const cancelOrder = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { reason } = req.body;
+
+  if (!reason || !reason.trim()) {
+    throw new ApiError(400, "Cancellation reason is required");
+  }
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     throw new ApiError(400, "Invalid order ID");
   }
 
   const order = await Order.findById(id);
-
-  if (!order) {
-    throw new ApiError(404, "Order not found");
-  }
+  if (!order) throw new ApiError(404, "Order not found");
 
   const isOwner = order.user.toString() === req.user._id.toString();
   const isAdmin = req.user.role === "admin";
-
-  if (!isOwner && !isAdmin) {
-    throw new ApiError(403, "Not authorized to cancel this order");
-  }
+  if (!isOwner && !isAdmin) throw new ApiError(403, "Not authorized");
 
   if (["shipped", "delivered"].includes(order.status)) {
-    throw new ApiError(
-      400,
-      "Order already shipped/delivered. Cancel not allowed."
-    );
+    throw new ApiError(400, "Order already shipped/delivered. Cancel not allowed.");
+  }
+
+  if (order.status === "cancelled") {
+    throw new ApiError(400, "Order is already cancelled");
   }
 
   order.status = "cancelled";
+  order.cancellationReason = reason.trim();
 
-  // 💰 Refund logic (Prepaid orders)
-  if (order.isPaid) {
-    order.paymentResult = {
-      ...order.paymentResult,
-      refundStatus: "initiated",
-    };
+  // 💰 Prepaid + Razorpay → Refund initiate karo
+  let refundData = null;
+  if (order.isPaid && order.razorpayPaymentId) {
+    try {
+      const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
+        amount: Math.round(order.totalPrice * 100), // paise mein
+        notes: {
+          reason: reason.trim(),
+          orderId: order._id.toString(),
+        },
+      });
+
+      refundData = {
+        refundId: refund.id,
+        status: refund.status,
+        amount: refund.amount / 100,
+        initiatedAt: new Date(),
+      };
+
+      order.refund = refundData;
+    } catch (err) {
+      console.error("Razorpay refund failed:", err);
+      throw new ApiError(500, "Order cancelled but refund initiation failed: " + err.message);
+    }
   }
 
-  // 🚚 Cancel Delhivery shipment if AWB generated
+  // 🚚 Delhivery AWB cancel karo (status update)
   if (order.delivery?.awb && order.delivery.status !== "delivered") {
-    try {
-      order.delivery.status = "failed";
-    } catch (err) {
-      console.error("Failed to cancel shipment:", err);
-    }
+    order.delivery.status = "failed";
   }
 
   await order.save();
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, order, "Order cancelled successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      { order, refund: refundData },
+      refundData
+        ? "Order cancelled and refund initiated successfully"
+        : "Order cancelled successfully"
+    )
+  );
 });
 
 /**

@@ -382,13 +382,44 @@ export const updateEwaybill = async (waybill, ewaybillData) => {
 // ============================================
 // 14. DOWNLOAD DOCUMENT
 // ============================================
-export const downloadDocument = async (waybill, documentType = 'pod') => {
+export const downloadDocument = async (waybill, documentType = 'invoice') => {
   try {
-    const response = await axiosClient.get(`/api/v1/packages/json/`, {
-      params: { waybill, document_type: documentType },
-      responseType: 'arraybuffer'
+    let endpoint;
+    let params;
+
+    if (documentType === 'invoice') {
+      // Invoice endpoint
+      endpoint = `/api/p/packing_slip`;
+      params = { wbns: waybill, pdf: true };
+    } else if (documentType === 'label') {
+      // Label endpoint
+      endpoint = `/api/p/packing_slip`;
+      params = { wbns: waybill, pdf: true };
+    } else if (documentType === 'pod') {
+      // POD endpoint
+      endpoint = `/api/pod/`;
+      params = { waybill };
+    } else {
+      endpoint = `/api/p/packing_slip`;
+      params = { wbns: waybill, pdf: true };
+    }
+
+    const response = await axiosClient.get(endpoint, {
+      params,
+      responseType: 'arraybuffer',
     });
-    return { success: true, data: response.data, contentType: response.headers['content-type'] };
+
+    const contentType = response.headers['content-type'] || 'application/pdf';
+    if (contentType.includes('application/json')) {
+      const text = Buffer.from(response.data).toString('utf8');
+      throw new Error(`Delhivery returned JSON instead of PDF: ${text}`);
+    }
+
+    return {
+      success: true,
+      data: response.data,
+      contentType,
+    };
   } catch (error) {
     return handleError(error, 'Download Document');
   }

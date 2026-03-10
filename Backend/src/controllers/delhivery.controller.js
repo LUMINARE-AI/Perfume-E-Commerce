@@ -469,33 +469,28 @@ export const updateEwaybill = async (req, res) => {
 export const downloadDocument = async (req, res) => {
   try {
     const { waybill } = req.params;
-    const { type = 'pod' } = req.query;
-    
+    const { type = 'invoice' } = req.query;
+
     if (!waybill) {
-      return res.status(400).json({
-        success: false,
-        message: 'Waybill number is required'
-      });
+      return res.status(400).json({ success: false, message: 'Waybill number is required' });
     }
 
     const result = await delhiveryService.downloadDocument(waybill, type);
-    
+
     if (result.success) {
-      res.setHeader('Content-Type', result.contentType);
+      // ✅ Fallback content type
+      const contentType = result.contentType || 'application/pdf';
+      res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Disposition', `attachment; filename=${type}-${waybill}.pdf`);
-      return res.send(result.data);
+      return res.send(Buffer.from(result.data));
     }
-    
+
     return res.status(400).json({
       success: false,
       message: 'Failed to download document',
-      error: result.error
+      error: result.error,
     });
   } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: error.message
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
