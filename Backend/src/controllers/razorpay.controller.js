@@ -4,7 +4,6 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import Order from "../models/order.model.js";
-import User from "../models/user.model.js"; // ✅ User import
 
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
   const { orderId } = req.body;
@@ -132,12 +131,9 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     }
   }
 
-  // ✅ Step 7: Payment verify hone ke baad PREPAID cart empty karo
-  const user = await User.findById(order.user._id || order.user);
-  if (user) {
-    user.cart = [];
-    await user.save();
-  }
+  // ✅ Step 7: req.user se cart empty karo — no extra import needed
+  req.user.cart = [];
+  await req.user.save();
 
   return res
     .status(200)
