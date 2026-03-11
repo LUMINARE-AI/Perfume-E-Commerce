@@ -4,7 +4,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import mongoose from "mongoose";
 import { createShipment } from "../services/delhivery.service.js";
-import { razorpay } from "../services/razorpay.service.js"; // ← ADD KARO
+import { razorpay } from "../services/razorpay.service.js";
 
 /**
   * Create Order
@@ -19,7 +19,6 @@ export const createOrder = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Cart is empty");
   }
 
-  // ✅ shippingFee bhi lo frontend se
   const { shippingAddress, paymentMethod, shippingFee } = req.body;
 
   if (!shippingAddress || !paymentMethod) {
@@ -59,7 +58,6 @@ export const createOrder = asyncHandler(async (req, res) => {
 
   const taxPrice = 0;
 
-  // ✅ Live Delhivery fee use karo, fallback: >3000 = free, else 150
   const shippingPrice =
     shippingFee !== undefined && shippingFee !== null
       ? Number(shippingFee)
@@ -69,11 +67,9 @@ export const createOrder = asyncHandler(async (req, res) => {
 
   const totalPrice = itemsPrice + taxPrice + shippingPrice;
 
-  // Normalize payment method
   const normalizedPaymentMethod =
     paymentMethod.toLowerCase() === "cod" ? "COD" : "PREPAID";
 
-  // Create order (unpaid initially for both)
   const order = await Order.create({
     user: user._id,
     items,
@@ -147,13 +143,6 @@ export const createOrder = asyncHandler(async (req, res) => {
               "Shipment creation failed",
           };
         }
-
-        order.delivery = {
-          provider: "delhivery",
-          awb,
-          status: "pending",
-          trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
-        };
       } else {
         order.delivery = {
           provider: "delhivery",
@@ -171,12 +160,13 @@ export const createOrder = asyncHandler(async (req, res) => {
     }
 
     await order.save();
+
+    // ✅ COD ke liye cart clear karo
+    user.cart = [];
+    await user.save();
   }
 
-  // 🧹 Clear cart
-  user.cart = [];
-  await user.save();
-
+  // ✅ PREPAID ke liye cart clear NAHI hogi — verifyRazorpayPayment mein hogi
   return res
     .status(201)
     .json(new ApiResponse(201, order, "Order created successfully"));
@@ -424,7 +414,7 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   if (order.isPaid && order.razorpayPaymentId) {
     try {
       const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-        amount: Math.round(order.totalPrice * 100), // paise mein
+        amount: Math.round(order.totalPrice * 100),
         notes: {
           reason: reason.trim(),
           orderId: order._id.toString(),
@@ -448,7 +438,6 @@ export const cancelOrder = asyncHandler(async (req, res) => {
     }
   }
 
-  // 🚚 Delhivery AWB cancel karo (status update)
   if (order.delivery?.awb && order.delivery.status !== "delivered") {
     order.delivery.status = "failed";
   }
@@ -469,11 +458,8 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 });
 
 /**
- * Update Delivery Info (Admin) — AWB save karne ke liye after manual shipment creation
+ * Update Delivery Info (Admin)
  * PUT /api/orders/:id/delivery
- *
- * ⚠️  order.routes.js mein ye line add karo:
- *   router.put("/:id/delivery", verifyJWT, isAdmin, updateOrderDelivery);
  */
 export const updateOrderDelivery = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -494,7 +480,6 @@ export const updateOrderDelivery = asyncHandler(async (req, res) => {
     ...(error && { error }),
   };
 
-  // AWB mil gayi toh status processing kar do (agar abhi pending hai)
   if (awb && order.status === "pending") {
     order.status = "processing";
   }

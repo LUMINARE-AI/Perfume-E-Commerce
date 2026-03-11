@@ -4,6 +4,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import Order from "../models/order.model.js";
+import User from "../models/user.model.js"; // ✅ User import
 
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
   const { orderId } = req.body;
@@ -23,7 +24,7 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
   }
 
   const order = await razorpay.orders.create({
-    amount: Math.round(dbOrder.totalPrice * 100), // paise mein, backend se
+    amount: Math.round(dbOrder.totalPrice * 100),
     currency: "INR",
     receipt: "receipt_" + dbOrder._id,
   });
@@ -41,7 +42,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     orderId,
   } = req.body;
 
-  //  Signature verify
+  // ✅ Step 1: Signature verify
   const body = razorpay_order_id + "|" + razorpay_payment_id;
   const expectedSignature = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -52,17 +53,17 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Payment verification failed");
   }
 
-  // DB se order fetch
+  // ✅ Step 2: DB se order fetch
   const existingOrder = await Order.findById(orderId);
   if (!existingOrder) throw new ApiError(404, "Order not found");
 
-  // Amount mismatch check
+  // ✅ Step 3: Amount mismatch check
   const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
   if (razorpayOrder.amount !== Math.round(existingOrder.totalPrice * 100)) {
     throw new ApiError(400, "Amount mismatch — possible tampering");
   }
 
-  // Idempotency — PEHLE check, phir update
+  // ✅ Step 4: Idempotency — pehle check, phir update
   if (existingOrder.isPaid && existingOrder.delivery?.awb) {
     return res
       .status(200)
@@ -71,7 +72,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       );
   }
 
-  // Order update
+  // ✅ Step 5: Order update
   const order = await Order.findByIdAndUpdate(
     orderId,
     {
@@ -82,7 +83,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     { new: true }
   ).populate("user", "name");
 
-  // PREPAID ke liye Delhivery shipment banao
+  // ✅ Step 6: PREPAID ke liye Delhivery shipment banao
   if (order && !order.delivery?.awb) {
     try {
       const { createShipment } = await import("../services/delhivery.service.js");
@@ -128,8 +129,14 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       await order.save();
     } catch (err) {
       console.error("Delhivery shipment failed for prepaid order:", err.message);
-      // Shipment fail hone pe payment verified rehti hai, silently log karo
     }
+  }
+
+  // ✅ Step 7: Payment verify hone ke baad PREPAID cart empty karo
+  const user = await User.findById(order.user._id || order.user);
+  if (user) {
+    user.cart = [];
+    await user.save();
   }
 
   return res
