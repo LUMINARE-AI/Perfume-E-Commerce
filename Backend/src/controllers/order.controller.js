@@ -6,6 +6,12 @@ import mongoose from "mongoose";
 import { createShipment } from "../services/delhivery.service.js";
 import { razorpay } from "../services/razorpay.service.js"; // ← ADD KARO
 
+/**
+  * Create Order
+  * POST /api/orders
+  * Body: { shippingAddress, paymentMethod, shippingFee }
+ */
+
 export const createOrder = asyncHandler(async (req, res) => {
   const user = await req.user.populate("cart.product");
 
@@ -400,7 +406,10 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   if (!isOwner && !isAdmin) throw new ApiError(403, "Not authorized");
 
   if (["shipped", "delivered"].includes(order.status)) {
-    throw new ApiError(400, "Order already shipped/delivered. Cancel not allowed.");
+    throw new ApiError(
+      400,
+      "Order already shipped/delivered. Cancel not allowed."
+    );
   }
 
   if (order.status === "cancelled") {
@@ -432,7 +441,10 @@ export const cancelOrder = asyncHandler(async (req, res) => {
       order.refund = refundData;
     } catch (err) {
       console.error("Razorpay refund failed:", err);
-      throw new ApiError(500, "Order cancelled but refund initiation failed: " + err.message);
+      throw new ApiError(
+        500,
+        "Order cancelled but refund initiation failed: " + err.message
+      );
     }
   }
 
@@ -443,15 +455,17 @@ export const cancelOrder = asyncHandler(async (req, res) => {
 
   await order.save();
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      { order, refund: refundData },
-      refundData
-        ? "Order cancelled and refund initiated successfully"
-        : "Order cancelled successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { order, refund: refundData },
+        refundData
+          ? "Order cancelled and refund initiated successfully"
+          : "Order cancelled successfully"
+      )
+    );
 });
 
 /**

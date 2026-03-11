@@ -6,16 +6,27 @@ import { ApiError } from "../utils/ApiError.js";
 import Order from "../models/order.model.js";
 
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
-  const { amount } = req.body;
+  const { orderId } = req.body;
 
-  if (!amount || amount <= 0) {
-    throw new ApiError(400, "Amount is required");
+  if (!orderId) {
+    throw new ApiError(400, "Order ID is required");
+  }
+
+  // ✅ Amount backend se lo — frontend pe trust mat karo
+  const dbOrder = await Order.findById(orderId);
+
+  if (!dbOrder) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  if (dbOrder.isPaid) {
+    throw new ApiError(400, "Order is already paid");
   }
 
   const order = await razorpay.orders.create({
-    amount: amount * 100, // Razorpay works in paise
+    amount: Math.round(dbOrder.totalPrice * 100), // paise mein, backend se
     currency: "INR",
-    receipt: "receipt_" + Date.now(),
+    receipt: "receipt_" + dbOrder._id,
   });
 
   return res.status(200).json(
@@ -42,6 +53,13 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       { isPaid: true, paidAt: new Date(), razorpayPaymentId: razorpay_payment_id },
       { new: true }
     ).populate("user", "name");
+
+    // ✅ Already paid check — idempotency
+    if (order && order.isPaid && order.delivery?.awb) {
+      return res.status(200).json(
+        new ApiResponse(200, { status: "success" }, "Payment already verified")
+      );
+    }
 
     // ✅ PREPAID ke liye ab Delhivery shipment banao
     if (order && !order.delivery?.awb) {
