@@ -52,6 +52,12 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Payment verification failed");
   }
 
+  const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+  if (payment.status !== "captured") {
+    throw new ApiError(400, "Payment not successful");
+  }
+
   // ✅ Step 2: DB se order fetch
   const existingOrder = await Order.findById(orderId);
   if (!existingOrder) throw new ApiError(404, "Order not found");
@@ -85,7 +91,8 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   // ✅ Step 6: PREPAID ke liye Delhivery shipment banao
   if (order && !order.delivery?.awb) {
     try {
-      const { createShipment } = await import("../services/delhivery.service.js");
+      const { createShipment } =
+        await import("../services/delhivery.service.js");
 
       const shipmentData = {
         customerName: order.shippingAddress.name,
@@ -127,7 +134,10 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       order.status = "processing";
       await order.save();
     } catch (err) {
-      console.error("Delhivery shipment failed for prepaid order:", err.message);
+      console.error(
+        "Delhivery shipment failed for prepaid order:",
+        err.message
+      );
     }
   }
 
@@ -138,6 +148,10 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, { status: "success" }, "Payment verified successfully")
+      new ApiResponse(
+        200,
+        { status: "success" },
+        "Payment verified successfully"
+      )
     );
 });

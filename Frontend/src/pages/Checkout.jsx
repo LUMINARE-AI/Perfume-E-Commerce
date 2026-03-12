@@ -211,57 +211,63 @@ export default function Checkout() {
   };
 
   // ── Place order ──────────────────────────────────────────
-const placeOrder = async () => {
-  try {
-    const finalShippingFee = shippingFee ?? lastSuccessfulFee.current ?? 0;
+  const placeOrder = async () => {
+    try {
+      const finalShippingFee = shippingFee ?? lastSuccessfulFee.current ?? 0;
 
-    const orderPayload = {
-      shippingAddress: { ...shipping, name: shipping.fullName },
-      paymentMethod: payment === "cod" ? "cod" : "prepaid",
-      shippingFee: finalShippingFee,
-    };
+      const orderPayload = {
+        shippingAddress: { ...shipping, name: shipping.fullName },
+        paymentMethod: payment === "cod" ? "cod" : "prepaid",
+        shippingFee: finalShippingFee,
+      };
 
-    if (payment === "cod") {
-      const res = await createOrderApi(orderPayload);
-      navigate(`/order-success/${res.data.data._id}`);
-      return;
+      if (payment === "cod") {
+        const res = await createOrderApi(orderPayload);
+        navigate(`/order-success/${res.data.data._id}`);
+        return;
+      }
+
+      // ✅ Step 1: Pehle DB mein order banao
+      const orderRes = await createOrderApi(orderPayload);
+      const orderId = orderRes.data.data._id;
+
+      // ✅ Step 2: orderId se Razorpay order banao (amount backend calculate karega)
+      const { data } = await createRazorpayOrderApi(orderId);
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: data.data.amount,
+        currency: "INR",
+        name: "BinKhalid Perfumes",
+        description: "Luxury Perfume Order",
+        order_id: data.data.id,
+
+        handler: async function (response) {
+          // ✅ Step 3: Verify payment — orderId already hai
+          await verifyRazorpayPaymentApi({ ...response, orderId });
+          navigate(`/order-success/${orderId}`);
+        },
+
+        modal: {
+          ondismiss: function () {
+            console.log("Payment popup closed");
+          },
+        },
+
+        prefill: {
+          name: shipping.fullName,
+          contact: shipping.phone,
+        },
+
+        theme: { color: "#D4AF37" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Payment failed");
     }
-
-    // ✅ Step 1: Pehle DB mein order banao
-    const orderRes = await createOrderApi(orderPayload);
-    const orderId = orderRes.data.data._id;
-
-    // ✅ Step 2: orderId se Razorpay order banao (amount backend calculate karega)
-    const { data } = await createRazorpayOrderApi(orderId);
-
-    const options = {
-      key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: data.data.amount,
-      currency: "INR",
-      name: "BinKhalid Perfumes",
-      description: "Luxury Perfume Order",
-      order_id: data.data.id,
-
-      handler: async function (response) {
-        // ✅ Step 3: Verify payment — orderId already hai
-        await verifyRazorpayPaymentApi({ ...response, orderId });
-        navigate(`/order-success/${orderId}`);
-      },
-
-      prefill: {
-        name: shipping.fullName,
-        contact: shipping.phone,
-      },
-
-      theme: { color: "#D4AF37" },
-    };
-
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-  } catch (err) {
-    alert(err?.response?.data?.message || "Payment failed");
-  }
-};
+  };
 
   if (loading) {
     return (
