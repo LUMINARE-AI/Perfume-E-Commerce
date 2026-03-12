@@ -28,6 +28,9 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
     receipt: "receipt_" + dbOrder._id,
   });
 
+  dbOrder.razorpayOrderId = order.id;
+  await dbOrder.save();
+
   return res
     .status(200)
     .json(new ApiResponse(200, order, "Razorpay order created"));
@@ -62,6 +65,10 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   const existingOrder = await Order.findById(orderId);
   if (!existingOrder) throw new ApiError(404, "Order not found");
 
+  if (existingOrder.razorpayOrderId !== razorpay_order_id) {
+    throw new ApiError(400, "Invalid Razorpay order ID");
+  }
+
   // ✅ Step 3: Amount mismatch check
   const razorpayOrder = await razorpay.orders.fetch(razorpay_order_id);
   if (razorpayOrder.amount !== Math.round(existingOrder.totalPrice * 100)) {
@@ -69,7 +76,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   }
 
   // ✅ Step 4: Idempotency — pehle check, phir update
-  if (existingOrder.isPaid && existingOrder.delivery?.awb) {
+  if (existingOrder.isPaid) {
     return res
       .status(200)
       .json(
@@ -84,6 +91,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       isPaid: true,
       paidAt: new Date(),
       razorpayPaymentId: razorpay_payment_id,
+      status: "processing",
     },
     { new: true }
   ).populate("user", "name");

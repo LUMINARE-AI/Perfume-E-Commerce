@@ -7,9 +7,9 @@ import { createShipment } from "../services/delhivery.service.js";
 import { razorpay } from "../services/razorpay.service.js";
 
 /**
-  * Create Order
-  * POST /api/orders
-  * Body: { shippingAddress, paymentMethod, shippingFee }
+ * Create Order
+ * POST /api/orders
+ * Body: { shippingAddress, paymentMethod, shippingFee }
  */
 
 export const createOrder = asyncHandler(async (req, res) => {
@@ -87,86 +87,16 @@ export const createOrder = asyncHandler(async (req, res) => {
     taxPrice,
     shippingPrice,
     totalPrice,
+    status: "pending",
     isPaid: false,
   });
 
-  // 🚚 Create Delhivery shipment ONLY for COD
+  // No shipment for COD orders until they verified by  admin
   if (normalizedPaymentMethod === "COD") {
-    try {
-      const shipmentData = {
-        customerName: shippingAddress.name || user.name,
-        customerAddress: shippingAddress.address,
-        customerPincode: shippingAddress.pincode,
-        customerCity: shippingAddress.city,
-        customerState: shippingAddress.state,
-        customerCountry: "India",
-        customerPhone: shippingAddress.phone,
-
-        orderNumber: order._id.toString(),
-        paymentMode: "COD",
-
-        productDescription: items.map((i) => i.name).join(", "),
-        codAmount: totalPrice,
-        totalAmount: totalPrice,
-
-        quantity: items.reduce((sum, i) => sum + i.qty, 0),
-
-        weight: 0.5,
-
-        pickupLocationName: process.env.DELHIVERY_PICKUP_NAME || "BinKhalid",
-
-        sellerName: process.env.SELLER_NAME || "MOHAMMAD MOOSAA KHAN",
-        sellerAddress: process.env.SELLER_ADDRESS || "Jaipur Rajasthan India",
-        sellerGST: process.env.SELLER_GST || "",
-      };
-
-      const delhiveryRes = await createShipment(shipmentData);
-      console.log("DELHIVERY RESPONSE:", JSON.stringify(delhiveryRes, null, 2));
-
-      if (delhiveryRes.success) {
-        const awb = delhiveryRes.data?.packages?.[0]?.waybill;
-
-        if (awb) {
-          order.delivery = {
-            provider: "delhivery",
-            awb,
-            status: "pending",
-            trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
-          };
-        } else {
-          order.delivery = {
-            provider: "delhivery",
-            status: "pending",
-            awb: null,
-            error:
-              delhiveryRes.data?.packages?.[0]?.remarks?.[0] ||
-              "Shipment creation failed",
-          };
-        }
-      } else {
-        order.delivery = {
-          provider: "delhivery",
-          status: "pending",
-          error: delhiveryRes.error?.message || "Failed to create shipment",
-        };
-      }
-    } catch (err) {
-      order.delivery = {
-        provider: "delhivery",
-        status: "pending",
-        retryCount: 0,
-        error: err.message,
-      };
-    }
-
-    await order.save();
-
-    // ✅ COD ke liye cart clear karo
     user.cart = [];
     await user.save();
   }
 
-  // ✅ PREPAID ke liye cart clear NAHI hogi — verifyRazorpayPayment mein hogi
   return res
     .status(201)
     .json(new ApiResponse(201, order, "Order created successfully"));
