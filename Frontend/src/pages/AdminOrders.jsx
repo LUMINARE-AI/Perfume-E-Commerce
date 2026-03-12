@@ -228,14 +228,14 @@ function OrderRow({ order, onToast, onRefresh }) {
         customerCountry: order.shippingAddress.country || "India",
         customerPhone: order.shippingAddress.phone,
         orderNumber: order._id.toString(),
-        paymentMode: "Pre-paid",
+        paymentMode: order.paymentMethod === "COD" ? "COD" : "Pre-paid",
+        codAmount: order.paymentMethod === "COD" ? order.totalPrice : 0,
         productDescription: order.items.map((i) => i.name).join(", "),
-        codAmount: 0,
         totalAmount: order.totalPrice,
         quantity: order.items.reduce((s, i) => s + i.qty, 0),
         weight: 0.5,
         pickupLocationName:
-          import.meta.env.VITE_DELHIVERY_PICKUP_LOCATION || "Main Warehouse",
+          import.meta.env.VITE_DELHIVERY_PICKUP_LOCATION || "BinKhalid",
       });
 
       const awb =
@@ -251,6 +251,12 @@ function OrderRow({ order, onToast, onRefresh }) {
           status: "pending",
           trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
         });
+
+        // ✅ order status update after shipment creation
+        await api.put(`/orders/${order._id}/status`, {
+          status: "processing",
+        });
+        setStatus("processing");
         setDelivery({
           awb,
           provider: "delhivery",
@@ -438,8 +444,8 @@ function OrderRow({ order, onToast, onRefresh }) {
                 ))}
               </select>
 
-              {/* Create shipment — only for PREPAID without AWB */}
-              {isPrepaid && !hasAWB && order.status !== "cancelled" && (
+              {/* Create shipment — only for cod*/}
+              {!isPrepaid && !hasAWB && order.status !== "cancelled" && (
                 <button
                   onClick={handleCreateShipment}
                   disabled={actionLoading === "shipment"}
@@ -461,7 +467,11 @@ function OrderRow({ order, onToast, onRefresh }) {
               {/* Pickup request */}
               <button
                 onClick={handlePickup}
-                disabled={!hasAWB || actionLoading === "pickup"}
+                disabled={
+                  !hasAWB ||
+                  status !== "processing" ||
+                  actionLoading === "pickup"
+                }
                 className={`${btnBase} border-yellow-400/40 text-yellow-400 hover:bg-yellow-400/10`}
               >
                 {actionLoading === "pickup" ? (

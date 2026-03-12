@@ -47,7 +47,7 @@ export default function OrderDetails() {
 
   const handleDownloadInvoice = async () => {
     try {
-      if (!order?.delivery?.awb) {
+      if (!order?.isPaid && !order?.delivery?.awb) {
         toast.info("Invoice not available yet");
         return;
       }
@@ -90,7 +90,7 @@ export default function OrderDetails() {
 
       if (refund) {
         toast.success(
-          `Order cancelled! Refund of ₹${refund.amount.toLocaleString()} initiated — reflects in 5–7 business days.`
+          `Order cancelled! Refund of ₹${refund.amount.toLocaleString()} initiated — reflects in 5–7 business days.`,
         );
       } else {
         toast.success("Order cancelled successfully");
@@ -220,7 +220,7 @@ export default function OrderDetails() {
             </div>
 
             {/* Delivery Tracking */}
-            {order.delivery?.awb && (
+            {order.delivery?.awb && order.status !== "cancelled" && (
               <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <FiTruck className="text-yellow-400" size={20} />
@@ -263,6 +263,41 @@ export default function OrderDetails() {
             )}
           </div>
 
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <h2 className="text-white font-semibold mb-3">Order Timeline</h2>
+
+            <div className="flex items-center justify-between text-xs">
+              <div className="text-yellow-400">Order Placed</div>
+              <div
+                className={
+                  order.status !== "pending"
+                    ? "text-yellow-400"
+                    : "text-gray-500"
+                }
+              >
+                Processing
+              </div>
+              <div
+                className={
+                  order.status === "shipped" || order.status === "delivered"
+                    ? "text-yellow-400"
+                    : "text-gray-500"
+                }
+              >
+                Shipped
+              </div>
+              <div
+                className={
+                  order.status === "delivered"
+                    ? "text-yellow-400"
+                    : "text-gray-500"
+                }
+              >
+                Delivered
+              </div>
+            </div>
+          </div>
+
           {/* Right Column - Summary */}
           <div className="space-y-6">
             {/* Payment Info */}
@@ -290,6 +325,18 @@ export default function OrderDetails() {
                 </div>
               </div>
             </div>
+
+            {order.refund && (
+              <div className="bg-green-400/10 border border-green-400/20 rounded p-3 mt-3">
+                <p className="text-green-400 text-sm font-medium">
+                  Refund Initiated
+                </p>
+                <p className="text-gray-300 text-xs mt-1">
+                  ₹{order.refund.amount.toLocaleString()} will reflect in your
+                  account within 5–7 business days.
+                </p>
+              </div>
+            )}
 
             {/* Price Summary */}
             <div className="bg-white/5 border border-white/10 rounded-lg p-4 md:p-6">
@@ -327,7 +374,7 @@ export default function OrderDetails() {
                 {downloading ? "Downloading..." : "Download Invoice"}
               </button>
 
-              {canCancel && (
+              {canCancel && order.status !== "cancelled" && (
                 <button
                   onClick={() => setShowCancelModal(true)}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/20 border border-red-400/30 text-red-400 font-medium rounded hover:bg-red-500/30 transition"
@@ -434,13 +481,31 @@ export default function OrderDetails() {
               >
                 {cancelling ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    <svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8z"
+                      />
                     </svg>
                     Cancelling...
                   </span>
-                ) : "Confirm Cancel"}
+                ) : (
+                  "Confirm Cancel"
+                )}
               </button>
             </div>
           </div>
