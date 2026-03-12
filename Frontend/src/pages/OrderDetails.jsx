@@ -263,7 +263,7 @@ export default function OrderDetails() {
             )}
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+          {/* <div className="bg-white/5 border border-white/10 rounded-lg p-4">
             <h2 className="text-white font-semibold mb-3">Order Timeline</h2>
 
             <div className="flex items-center justify-between text-xs">
@@ -296,7 +296,7 @@ export default function OrderDetails() {
                 Delivered
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Right Column - Summary */}
           <div className="space-y-6">
