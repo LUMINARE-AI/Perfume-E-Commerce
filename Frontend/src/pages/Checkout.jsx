@@ -28,6 +28,7 @@ export default function Checkout() {
   const [shippingFeeLoading, setShippingFeeLoading] = useState(false);
   const [shippingFeeError, setShippingFeeError] = useState("");
   const [pincodeServiceable, setPincodeServiceable] = useState(null);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   // ✅ Pichli successful fee yaad rakhne ke liye
   // Agar recalculation fail ho toh yeh use hogi, 199 nahi
@@ -212,6 +213,8 @@ export default function Checkout() {
 
   // ── Place order ──────────────────────────────────────────
   const placeOrder = async () => {
+    if (placingOrder) return;
+    setPlacingOrder(true);
     try {
       const finalShippingFee = shippingFee ?? lastSuccessfulFee.current ?? 0;
 
@@ -228,11 +231,11 @@ export default function Checkout() {
       }
 
       // ✅ Step 1: Pehle DB mein order banao
-      const orderRes = await createOrderApi(orderPayload);
-      const orderId = orderRes.data.data._id;
-
-      // ✅ Step 2: orderId se Razorpay order banao (amount backend calculate karega)
-      const { data } = await createRazorpayOrderApi(orderId);
+      // Step 1: Razorpay order create karo (amount backend calculate karega)
+      const { data } = await createRazorpayOrderApi({
+        shippingAddress: { ...shipping, name: shipping.fullName },
+        shippingFee: finalShippingFee,
+      });
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -243,14 +246,20 @@ export default function Checkout() {
         order_id: data.data.id,
 
         handler: async function (response) {
-          // ✅ Step 3: Verify payment — orderId already hai
-          await verifyRazorpayPaymentApi({ ...response, orderId });
+          const res = await verifyRazorpayPaymentApi({
+            ...response,
+            shippingAddress: { ...shipping, name: shipping.fullName },
+            shippingFee: finalShippingFee,
+          });
+
+          const orderId = res.data.data._id;
+
           navigate(`/order-success/${orderId}`);
         },
 
         modal: {
           ondismiss: function () {
-            console.log("Payment popup closed");
+            alert("Payment cancelled. Your order has not been placed.");
           },
         },
 
@@ -263,9 +272,17 @@ export default function Checkout() {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (response) {
+        alert(
+          response.error?.description ||
+            "Payment failed. Please try again or use Cash on Delivery.",
+        );
+      });
       rzp.open();
     } catch (err) {
       alert(err?.response?.data?.message || "Payment failed");
+    } finally {
+      setPlacingOrder(false);
     }
   };
 
@@ -541,7 +558,7 @@ export default function Checkout() {
                 <Button variant="outline" onClick={() => setStep(2)}>
                   Back
                 </Button>
-                <Button onClick={placeOrder}>
+                <Button onClick={placeOrder} disabled={placingOrder}>
                   {payment === "cod"
                     ? "Place Order"
                     : `Pay ₹${total.toLocaleString()}`}
