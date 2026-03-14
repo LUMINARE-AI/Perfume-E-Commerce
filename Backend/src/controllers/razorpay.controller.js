@@ -4,12 +4,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import Order from "../models/order.model.js";
-import Cart from "../models/cart.model.js";
-
+import { User } from "../models/user.model.js";
 
 // CREATE RAZORPAY ORDER (NO DB ORDER YET)
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
-
   const { shippingAddress, shippingFee } = req.body;
 
   if (!shippingAddress) {
@@ -17,7 +15,9 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
   }
 
   // User cart fetch
-  const cartItems = await Cart.find({ user: req.user._id }).populate("product");
+  const user = await User.findById(req.user._id).populate("cart.product");
+
+  const cartItems = user.cart;
 
   if (!cartItems.length) {
     throw new ApiError(400, "Cart is empty");
@@ -38,28 +38,29 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
   });
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      razorpayOrderId: razorpayOrder.id,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
-      shippingAddress,
-      shippingFee,
-      totalPrice
-    }, "Razorpay order created")
+    new ApiResponse(
+      200,
+      {
+        razorpayOrderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        shippingAddress,
+        shippingFee,
+        totalPrice,
+      },
+      "Razorpay order created"
+    )
   );
 });
 
-
-
 // VERIFY PAYMENT AND CREATE DB ORDER
 export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
-
   const {
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
     shippingAddress,
-    shippingFee
+    shippingFee,
   } = req.body;
 
   // SIGNATURE VERIFY
@@ -81,7 +82,9 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
   }
 
   // Fetch cart
-  const cartItems = await Cart.find({ user: req.user._id }).populate("product");
+  const user = await User.findById(req.user._id).populate("cart.product");
+
+  const cartItems = user.cart;
 
   if (!cartItems.length) {
     throw new ApiError(400, "Cart is empty");
@@ -103,7 +106,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       name: item.product.name,
       image: item.product.images?.[0],
       price: item.product.price,
-      qty: item.quantity
+      qty: item.quantity,
     })),
     shippingAddress,
     paymentMethod: "PREPAID",
@@ -113,14 +116,11 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     isPaid: true,
     paidAt: new Date(),
     razorpayPaymentId: razorpay_payment_id,
-    status: "processing"
+    status: "processing",
   });
-
-
 
   // CREATE DELHIVERY SHIPMENT
   try {
-
     const { createShipment } = await import("../services/delhivery.service.js");
 
     const shipmentData = {
@@ -133,7 +133,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       customerPhone: order.shippingAddress.phone,
       orderNumber: order._id.toString(),
       paymentMode: "Prepaid",
-      productDescription: order.items.map(i => i.name).join(", "),
+      productDescription: order.items.map((i) => i.name).join(", "),
       codAmount: 0,
       totalAmount: order.totalPrice,
       quantity: order.items.reduce((sum, i) => sum + i.qty, 0),
@@ -162,21 +162,21 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
         };
 
     await order.save();
-
   } catch (err) {
     console.error("Delhivery shipment failed:", err.message);
   }
 
-
   // CLEAR CART
-  await Cart.deleteMany({ user: req.user._id });
+  user.cart = [];
+  await user.save();
 
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      { _id: order._id },
-      "Payment verified and order created successfully"
-    )
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        { _id: order._id },
+        "Payment verified and order created successfully"
+      )
+    );
 });
