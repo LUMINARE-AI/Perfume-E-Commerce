@@ -140,7 +140,7 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
       weight: 0.5,
       pickupLocationName: process.env.DELHIVERY_PICKUP_NAME || "BinKhalid",
       sellerName: process.env.SELLER_NAME || "MOHAMMAD MOOSAA KHAN",
-      sellerAddress: process.env.SELLER_ADDRESS || "Jaipur Rajasthan India",
+      sellerAddress: process.env.SELLER_ADDRESS || "Tonk Rajasthan India",
       sellerGST: process.env.SELLER_GST || "",
     };
 
