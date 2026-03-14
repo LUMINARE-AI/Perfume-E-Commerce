@@ -226,11 +226,11 @@ export default function Checkout() {
 
       if (payment === "cod") {
         const res = await createOrderApi(orderPayload);
+        setPlacingOrder(false);
         navigate(`/order-success/${res.data.data._id}`);
         return;
       }
 
-      // ✅ Step 1: Pehle DB mein order banao
       // Step 1: Razorpay order create karo (amount backend calculate karega)
       const { data } = await createRazorpayOrderApi({
         shippingAddress: { ...shipping, name: shipping.fullName },
@@ -243,22 +243,30 @@ export default function Checkout() {
         currency: "INR",
         name: "BinKhalid Perfumes",
         description: "Luxury Perfume Order",
-        order_id: data.data.id,
+        order_id: data.data.razorpayOrderId,
 
         handler: async function (response) {
-          const res = await verifyRazorpayPaymentApi({
-            ...response,
-            shippingAddress: { ...shipping, name: shipping.fullName },
-            shippingFee: finalShippingFee,
-          });
+          try {
+            const res = await verifyRazorpayPaymentApi({
+              ...response,
+              shippingAddress: { ...shipping, name: shipping.fullName },
+              shippingFee: finalShippingFee,
+            });
 
-          const orderId = res.data.data._id;
+            const orderId = res.data.data._id;
 
-          navigate(`/order-success/${orderId}`);
+            setPlacingOrder(false);
+            navigate(`/order-success/${orderId}`);
+            // eslint-disable-next-line no-unused-vars
+          } catch (err) {
+            setPlacingOrder(false);
+            alert("Payment verification failed");
+          }
         },
 
         modal: {
           ondismiss: function () {
+            setPlacingOrder(false);
             alert("Payment cancelled. Your order has not been placed.");
           },
         },
@@ -273,6 +281,7 @@ export default function Checkout() {
 
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", function (response) {
+        setPlacingOrder(false);
         alert(
           response.error?.description ||
             "Payment failed. Please try again or use Cash on Delivery.",
@@ -280,9 +289,8 @@ export default function Checkout() {
       });
       rzp.open();
     } catch (err) {
-      alert(err?.response?.data?.message || "Payment failed");
-    } finally {
       setPlacingOrder(false);
+      alert(err?.response?.data?.message || "Payment failed");
     }
   };
 
