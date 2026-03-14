@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
+import { useToast } from "../contexts/ToastContext";
 
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { error: showError } = useToast();
 
   const fetchOrders = async () => {
     try {
@@ -13,7 +15,7 @@ export default function MyOrders() {
       setOrders(res.data.data || []);
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch orders");
+      showError("Failed to fetch orders");
     } finally {
       setLoading(false);
     }
@@ -28,6 +30,7 @@ export default function MyOrders() {
     }, 30000);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {

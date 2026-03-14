@@ -128,7 +128,7 @@ const fetchCart = async () => {
   }
 
   return (
-    <main className="bg-black mt-14 min-h-screen">
+    <main className="bg-black mt-10 min-h-screen">
       {toast && (
         <div className="fixed top-20 right-4 z-50 animate-slide-in-right">
           <div

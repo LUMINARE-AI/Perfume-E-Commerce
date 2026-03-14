@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import { useToast } from "../contexts/ToastContext";
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -8,6 +9,8 @@ export default function Contact() {
     email: "",
     message: "",
   });
+
+  const { error: showError } = useToast();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -17,11 +20,11 @@ const handleSubmit = (e) => {
   e.preventDefault();
 
   if (!form.name || !form.email || !form.message) {
-    alert("Please fill all fields.");
+    showError("Please fill all fields.");
     return;
   }
 
-  const phoneNumber = "918432666699"; // without + sign
+  const phoneNumber = "918432666699";
   const text = `New Contact Message:
 Name: ${form.name}
 Email: ${form.email}
@@ -33,7 +36,7 @@ Message: ${form.message}`;
 };
 
   return (
-    <main className="bg-black min-h-screen mt-14 text-white">
+    <main className="bg-black min-h-screen mt-10 text-white">
       <div className="max-w-6xl mx-auto px-6 py-16">
         <h1 className="text-3xl md:text-4xl font-serif mb-8">
           Contact Us

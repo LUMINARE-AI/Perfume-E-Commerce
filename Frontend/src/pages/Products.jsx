@@ -6,6 +6,8 @@ import ConfirmDeleteModal from "../components/ui/ConfirmDeleteModal";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
+import { useToast } from "../contexts/ToastContext";
+import Loader from "../components/ui/Loader";
 
 export default function Products() {
   const [sort, setSort] = useState("newest");
@@ -21,6 +23,7 @@ export default function Products() {
   const [deleteId, setDeleteId] = useState(null);
   const [searchParams] = useSearchParams();
   const search = searchParams.get("search");
+  const { error: showError } = useToast();
 
   const [user, setUser] = useState(null);
   const isAdmin = user?.role === "admin";
@@ -84,15 +87,16 @@ export default function Products() {
       setShowDeleteConfirm(false);
       setDeleteId(null);
       fetchProducts();
+    // eslint-disable-next-line no-unused-vars
     } catch (err) {
-      alert("Failed to delete product", err);
+      showError("Failed to delete product");
     }
   };
 
   if (loading) {
     return (
       <div className="bg-black min-h-screen flex items-center justify-center">
-        <div className="text-white text-lg">Loading products...</div>
+        <Loader />
       </div>
     );
   }

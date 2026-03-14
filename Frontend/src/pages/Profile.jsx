@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import { useToast } from "../contexts/ToastContext";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
   const [form, setForm] = useState({ name: "", email: "" });
+  const { success } = useToast();
 
   useEffect(() => {
     api.get("/users/me").then((res) => {
@@ -19,7 +21,7 @@ export default function Profile() {
 
   const updateProfile = async () => {
     await api.put("/users/me", form);
-    alert("Profile updated");
+    success("Profile updated");
   };
 
   if (!user) return <p className="text-white">Loading...</p>;

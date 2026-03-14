@@ -1,7 +1,7 @@
 import OudAlKhalid from "../assets/OudAlKhalid.png";
 export default function About() {
   return (
-    <main className="bg-black mt-14 min-h-screen text-white">
+    <main className="bg-black mt-10 min-h-screen text-white">
       <div className="max-w-6xl mx-auto px-6 py-16">
         <h1 className="text-3xl md:text-4xl font-serif mb-6">
           About BinKhalid

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
+import { useToast } from "../contexts/ToastContext";
 
 export default function MyAddresses() {
   const [address, setAddress] = useState({
@@ -12,6 +13,7 @@ export default function MyAddresses() {
     state: "",
     pincode: "",
   });
+  const { success } = useToast();
 
   useEffect(() => {
     api.get("/users/address").then((res) => {
@@ -21,7 +23,7 @@ export default function MyAddresses() {
 
   const saveAddress = async () => {
     await api.put("/users/address", address);
-    alert("Address saved");
+    success("Address saved");
   };
 
   return (

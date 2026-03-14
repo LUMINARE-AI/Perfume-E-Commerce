@@ -2,7 +2,8 @@ import { useState } from "react";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
-import { logout } from "../utils/authUtils"; // ← adjust path if needed
+import { logout } from "../utils/authUtils"; // ← adjust path if needed\
+import { useToast } from "../contexts/ToastContext";
 
 export default function Security() {
   const [passwords, setPasswords] = useState({
@@ -10,9 +11,11 @@ export default function Security() {
     newPassword: "",
   });
 
+  const { success } = useToast();
+
   const changePassword = async () => {
     await api.put("/users/change-password", passwords);
-    alert("Password updated");
+    success("Password updated");
   };
 
   return (

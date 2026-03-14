@@ -9,6 +9,8 @@ import {
   verifyRazorpayPaymentApi,
 } from "../api/payment";
 import { checkServiceability, calculateShippingCost } from "../api/delhivery";
+import { useToast } from "../contexts/ToastContext";
+import Loader from "../components/ui/Loader";
 
 export default function Checkout() {
   const [step, setStep] = useState(1);
@@ -29,6 +31,7 @@ export default function Checkout() {
   const [shippingFeeError, setShippingFeeError] = useState("");
   const [pincodeServiceable, setPincodeServiceable] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const { error: showError } = useToast();
 
   // ✅ Pichli successful fee yaad rakhne ke liye
   // Agar recalculation fail ho toh yeh use hogi, 199 nahi
@@ -42,7 +45,7 @@ export default function Checkout() {
       setCartItems(res.data.data || []);
     } catch (err) {
       console.error("Cart fetch error:", err);
-      alert("Failed to load cart");
+      showError("Failed to load cart");
     } finally {
       setLoading(false);
     }
@@ -50,6 +53,7 @@ export default function Checkout() {
 
   useEffect(() => {
     fetchCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const subtotal = useMemo(
@@ -185,19 +189,21 @@ export default function Checkout() {
   const handleNextFromShipping = () => {
     const { fullName, phone, address, city, state, pincode } = shipping;
     if (!fullName || !phone || !address || !city || !state || !pincode) {
-      alert("Please fill all shipping details.");
+      showError("Please fill all shipping details.");
       return;
     }
     if (pincodeServiceable === false) {
-      alert("This pincode is not serviceable. Please use a different address.");
+      showError(
+        "This pincode is not serviceable. Please use a different address.",
+      );
       return;
     }
     if (shippingFeeLoading) {
-      alert("Fetching shipping cost, please wait...");
+      showError("Fetching shipping cost, please wait...");
       return;
     }
     if (shippingFee === null) {
-      alert("Could not determine shipping cost. Please re-enter pincode.");
+      showError("Could not determine shipping cost. Please re-enter pincode.");
       return;
     }
     setStep(2);
@@ -205,7 +211,7 @@ export default function Checkout() {
 
   const handleNextFromPayment = () => {
     if (!payment) {
-      alert("Please select a payment method.");
+      showError("Please select a payment method.");
       return;
     }
     setStep(3);
@@ -260,14 +266,14 @@ export default function Checkout() {
             // eslint-disable-next-line no-unused-vars
           } catch (err) {
             setPlacingOrder(false);
-            alert("Payment verification failed");
+            showError("Payment verification failed");
           }
         },
 
         modal: {
           ondismiss: function () {
             setPlacingOrder(false);
-            alert("Payment cancelled. Your order has not been placed.");
+            showError("Payment cancelled. Your order has not been placed.");
           },
         },
 
@@ -282,7 +288,7 @@ export default function Checkout() {
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", function (response) {
         setPlacingOrder(false);
-        alert(
+        showError(
           response.error?.description ||
             "Payment failed. Please try again or use Cash on Delivery.",
         );
@@ -290,20 +296,20 @@ export default function Checkout() {
       rzp.open();
     } catch (err) {
       setPlacingOrder(false);
-      alert(err?.response?.data?.message || "Payment failed");
+      showError(err?.response?.data?.message || "Payment failed");
     }
   };
 
   if (loading) {
     return (
-      <div className="bg-black min-h-screen flex items-center justify-center text-white">
-        Loading checkout...
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <Loader />
       </div>
     );
   }
 
   return (
-    <main className="bg-black min-h-screen mt-14">
+    <main className="bg-black min-h-screen mt-10">
       <div className="max-w-5xl mx-auto px-6 py-10 text-white">
         <h1 className="text-2xl md:text-3xl font-serif mb-8">Checkout</h1>
 
