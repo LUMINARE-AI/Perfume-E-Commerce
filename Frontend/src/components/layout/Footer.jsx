@@ -132,8 +132,8 @@ export default function Footer() {
               <div className="flex gap-4">
                 {[
                   { Icon: FiInstagram, href: "https://www.instagram.com/binkhalid_perfumes/", label: "Instagram" },
-                  { Icon: FiFacebook, href: "https://www.facebook.com/binkhalidperfumes", label: "Facebook" },
-                  { Icon: FiTwitter, href: "https://twitter.com/binkhalid_perf", label: "Twitter" },
+                  // { Icon: FiFacebook, href: "https://www.facebook.com/binkhalidperfumes", label: "Facebook" },
+                  // { Icon: FiTwitter, href: "https://twitter.com/binkhalid_perf", label: "Twitter" },
                 // eslint-disable-next-line no-unused-vars
                 ].map(({ Icon, href, label }) => (
                   <a
