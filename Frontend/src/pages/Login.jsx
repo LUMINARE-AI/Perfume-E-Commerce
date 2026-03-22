@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 
 export default function Login() {
-  const navigate = useNavigate();
-
   const [form, setForm] = useState({
     email: "",
     password: "",
@@ -30,10 +28,7 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const { data } = await api.post(
-        "/users/login",
-        form
-      );
+      const { data } = await api.post("/users/login", form);
 
       // adjust according to your backend response structure
       const token = data?.data?.accessToken;
@@ -47,12 +42,11 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(user));
 
       // Redirect after login
-      navigate("/products");
+      localStorage.setItem("loginToast", "Logged in as " + user.email);
+      window.location.href = "/products";
     } catch (err) {
       console.error(err);
-      setError(
-        err?.response?.data?.message || "Invalid email or password"
-      );
+      setError(err?.response?.data?.message || "Invalid email or password");
     } finally {
       setLoading(false);
     }
@@ -66,9 +60,7 @@ export default function Login() {
         </h1>
 
         {error && (
-          <p className="mb-4 text-sm text-red-400 text-center">
-            {error}
-          </p>
+          <p className="mb-4 text-sm text-red-400 text-center">{error}</p>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">

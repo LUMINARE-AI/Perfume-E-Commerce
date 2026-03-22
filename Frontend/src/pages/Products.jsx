@@ -27,11 +27,21 @@ export default function Products() {
 
   const [user, setUser] = useState(null);
   const isAdmin = user?.role === "admin";
+  const toast = useToast();
 
   // Reset to page 1 whenever search term changes
   useEffect(() => {
     setPage(1);
   }, [search]);
+
+  useEffect(() => {
+    const msg = localStorage.getItem("loginToast");
+
+    if (msg) {
+      toast.success(msg);
+      localStorage.removeItem("loginToast");
+    }
+  }, [toast]);
 
   const fetchProducts = async () => {
     try {
@@ -87,7 +97,7 @@ export default function Products() {
       setShowDeleteConfirm(false);
       setDeleteId(null);
       fetchProducts();
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (err) {
       showError("Failed to delete product");
     }
@@ -151,7 +161,9 @@ export default function Products() {
         {products.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-400 text-lg">
-              {search ? `No products found for "${search}"` : "No products found"}
+              {search
+                ? `No products found for "${search}"`
+                : "No products found"}
             </p>
             {search && (
               <Link
