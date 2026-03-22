@@ -45,7 +45,7 @@ export default function Footer() {
                   size={16} 
                 />
                 <span className="font-light leading-relaxed">
-                  Raj talkies road, Bda kuaa<br /> Tonk, Rajasthan, India
+                  Raj talkies road, Bada Kuan<br /> Tonk, Rajasthan, India
                 </span>
               </div>
               <div className="flex items-center gap-3 group">

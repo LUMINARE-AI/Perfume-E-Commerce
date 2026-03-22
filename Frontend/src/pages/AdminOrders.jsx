@@ -5,7 +5,6 @@ import {
   createPickupRequest,
   generateShippingLabel,
   trackShipment,
-  downloadFile,
 } from "../api/delhivery";
 import {
   FiPackage,
@@ -299,20 +298,30 @@ function OrderRow({ order, onToast, onRefresh }) {
   };
 
   // ── Download label ─────────────────────────────────────────
-  const handleLabel = async () => {
-    if (!hasAWB) return onToast("No AWB — create shipment first", "error");
-    try {
-      setActionLoading("label");
-      const res = await generateShippingLabel(delivery.awb, "A4");
-      downloadFile(res.data, `label-${delivery.awb}.pdf`);
-      onToast("Label downloaded!", "success");
-    } catch (e) {
-      console.error(e);
-      onToast("Label download failed", "error");
-    } finally {
-      setActionLoading("");
+const handleLabel = async () => {
+  if (!hasAWB) return onToast("No AWB — create shipment first", "error");
+
+  try {
+    setActionLoading("label");
+
+    const res = await generateShippingLabel(delivery.awb, "A4");
+
+    const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
+
+    if (!pdfUrl) {
+      throw new Error("Label not available");
     }
-  };
+
+    window.open(pdfUrl, "_blank");
+
+    onToast("Label opened successfully!", "success");
+  } catch (e) {
+    console.error(e);
+    onToast("Label download failed", "error");
+  } finally {
+    setActionLoading("");
+  }
+};
 
   const btnBase =
     "flex items-center gap-1.5 px-3 py-1.5 text-xs border transition disabled:opacity-40 disabled:cursor-not-allowed";

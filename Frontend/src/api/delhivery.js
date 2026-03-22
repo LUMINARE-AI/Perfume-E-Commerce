@@ -94,7 +94,6 @@ export const createPickupRequest = (pickupData) =>
 export const generateShippingLabel = (waybill, pdfSize = 'A4') =>
   axios.get(`/delhivery/label/${waybill}`, {
     params: { pdfSize },
-    responseType: 'blob', // PDF download ke liye
   });
 
 /**
@@ -123,7 +122,6 @@ export const updateEwaybill = (waybill, ewaybillData) =>
 export const downloadDocument = (waybill, type = 'pod') =>
   axios.get(`/delhivery/document/${waybill}`, {
     params: { type },
-    responseType: 'blob', // Document download ke liye
   });
 
 /**
