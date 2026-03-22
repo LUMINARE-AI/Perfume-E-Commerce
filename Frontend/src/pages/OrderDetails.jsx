@@ -48,7 +48,7 @@ export default function OrderDetails() {
   const handleDownloadInvoice = async () => {
     try {
       if (order.status === "cancelled") {
-        toast.info("Invoice not available for cancelled orders");
+        toast.info("Invoice not available yet, It will be ready once the shipment is created");
         return;
       }
 

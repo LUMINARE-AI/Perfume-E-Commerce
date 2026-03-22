@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getOrderByIdApi } from "../api/orders";
 import { getTAT } from "../api/delhivery";
-import { downloadDocument, downloadFile } from "../api/delhivery";
+import { downloadDocument } from "../api/delhivery";
+import { useToast } from "../contexts/ToastContext";
 import Button from "../components/ui/Button";
 import {
   FiCheckCircle,
@@ -24,6 +25,8 @@ export default function OrderSuccess() {
   const [downloading, setDownloading] = useState(false);
   const [invoiceMsg, setInvoiceMsg] = useState("");
   const [expectedDelivery, setExpectedDelivery] = useState(null);
+
+  const toast = useToast();
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -74,9 +77,12 @@ export default function OrderSuccess() {
 
   const handleDownloadInvoice = async () => {
     try {
+      if (order.status === "cancelled") {
+        toast.info("Invoice not available for cancelled orders");
+        return;
+      }
       if (!order?.delivery?.awb) {
-        setInvoiceMsg("error"); // AWB nahi hai toh invoice nahi milega
-        setTimeout(() => setInvoiceMsg(""), 4000);
+        toast.info("Invoice not available yet, It will be ready once the shipment is created");
         return;
       }
 
@@ -84,7 +90,14 @@ export default function OrderSuccess() {
       setInvoiceMsg("");
 
       const res = await downloadDocument(order.delivery.awb, "invoice");
-      downloadFile(res.data, `invoice-${order.delivery.awb}.pdf`);
+
+      const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
+
+      if (!pdfUrl) {
+        throw new Error("PDF link not found");
+      }
+
+      window.open(pdfUrl, "_blank");
 
       setInvoiceMsg("success");
     } catch (error) {
