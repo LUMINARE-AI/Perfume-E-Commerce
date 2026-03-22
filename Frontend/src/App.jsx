@@ -43,7 +43,7 @@ export default function App() {
     <>
       {/* Navbar & Footer sirf non-admin routes pe */}
       <Navbar />
-      <CursorFollower />
+      {/* <CursorFollower /> */}
       <SmoothScroll>
         <Routes>
           <Route path="/" element={<Home />} />
