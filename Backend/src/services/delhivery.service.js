@@ -1,27 +1,27 @@
-import axios from 'axios';
+import axios from "axios";
 
 const DELHIVERY_API_KEY = process.env.DELHIVERY_API_KEY;
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const USE_MOCK = process.env.USE_MOCK_DELHIVERY === 'true';
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const USE_MOCK = process.env.USE_MOCK_DELHIVERY === "true";
 
-console.log('🔧 Delhivery Service Configuration:');
-console.log('  API Key:', DELHIVERY_API_KEY ? '✓ Present' : '✗ MISSING');
-console.log('  Environment:', process.env.NODE_ENV);
-console.log('  Mock Mode:', USE_MOCK);
+console.log("🔧 Delhivery Service Configuration:");
+console.log("  API Key:", DELHIVERY_API_KEY ? "✓ Present" : "✗ MISSING");
+console.log("  Environment:", process.env.NODE_ENV);
+console.log("  Mock Mode:", USE_MOCK);
 
 const BASE_URL = IS_PRODUCTION
-  ? 'https://track.delhivery.com'
-  : 'https://staging-express.delhivery.com';
+  ? "https://track.delhivery.com"
+  : "https://staging-express.delhivery.com";
 
-console.log('  Base URL:', BASE_URL);
+console.log("  Base URL:", BASE_URL);
 
 const axiosClient = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Token ${DELHIVERY_API_KEY}`
+    "Content-Type": "application/json",
+    Authorization: `Token ${DELHIVERY_API_KEY}`,
   },
-  timeout: 30000
+  timeout: 30000,
 });
 
 // ============================================
@@ -31,17 +31,17 @@ export const fetchWaybills = async (count = 1) => {
   if (USE_MOCK) {
     return {
       success: true,
-      data: Array.from({ length: count }, (_, i) => `MOCK${Date.now()}${i}`)
+      data: Array.from({ length: count }, (_, i) => `MOCK${Date.now()}${i}`),
     };
   }
 
   try {
     const response = await axiosClient.get(`/waybill/api/bulk/json/`, {
-      params: { count }
+      params: { count },
     });
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Fetch Waybills');
+    return handleError(error, "Fetch Waybills");
   }
 };
 
@@ -53,7 +53,7 @@ export const fetchWaybills = async (count = 1) => {
 //    Ab dono sahi kaam karenge
 // ============================================
 export const checkServiceability = async (pincode) => {
-  console.log('🔍 Checking serviceability for pincode:', pincode);
+  console.log("🔍 Checking serviceability for pincode:", pincode);
 
   if (USE_MOCK) {
     return {
@@ -62,25 +62,27 @@ export const checkServiceability = async (pincode) => {
       cod: true,
       prepaid: true,
       data: {
-        delivery_codes: [{
-          postal_code: {
-            pin: pincode,
-            city: "Delhi",
-            state_code: "DL",
-            state: "Delhi",
-            country_code: "IN"
+        delivery_codes: [
+          {
+            postal_code: {
+              pin: pincode,
+              city: "Delhi",
+              state_code: "DL",
+              state: "Delhi",
+              country_code: "IN",
+            },
+            prepaid: "Y",
+            cod: "Y",
+            pickup: "Y",
           },
-          prepaid: "Y",
-          cod: "Y",
-          pickup: "Y",
-        }]
-      }
+        ],
+      },
     };
   }
 
   try {
     const response = await axiosClient.get(`/c/api/pin-codes/json/`, {
-      params: { filter_codes: pincode }
+      params: { filter_codes: pincode },
     });
 
     const deliveryCodes = response.data?.delivery_codes || [];
@@ -91,21 +93,24 @@ export const checkServiceability = async (pincode) => {
       success: true,
       // ✅ Top-level flags — frontend easily check kar sake
       serviceable: isServiceable,
-      cod: pinData.cod === 'Y',
-      prepaid: pinData.prepaid === 'Y',
-      data: response.data
+      cod: pinData.cod === "Y",
+      prepaid: pinData.prepaid === "Y",
+      data: response.data,
     };
   } catch (error) {
-    console.error('❌ Serviceability check failed:', error.response?.data || error.message);
-    return handleError(error, 'Check Serviceability');
+    console.error(
+      "❌ Serviceability check failed:",
+      error.response?.data || error.message
+    );
+    return handleError(error, "Check Serviceability");
   }
 };
 
 // ============================================
 // 3. GET TAT
 // ============================================
-export const getExpectedTAT = async (originPin, destinationPin, mot = 'S') => {
-  console.log('⏱️ Getting TAT:', { originPin, destinationPin, mot });
+export const getExpectedTAT = async (originPin, destinationPin, mot = "S") => {
+  console.log("⏱️ Getting TAT:", { originPin, destinationPin, mot });
 
   if (USE_MOCK) {
     return {
@@ -114,18 +119,18 @@ export const getExpectedTAT = async (originPin, destinationPin, mot = 'S') => {
         origin_pin: originPin,
         destination_pin: destinationPin,
         expected_delivery_days: "3",
-        tat: "3"
-      }
+        tat: "3",
+      },
     };
   }
 
   try {
     const response = await axiosClient.get(`/api/dc/expected_tat`, {
-      params: { origin_pin: originPin, destination_pin: destinationPin, mot }
+      params: { origin_pin: originPin, destination_pin: destinationPin, mot },
     });
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Get Expected TAT');
+    return handleError(error, "Get Expected TAT");
   }
 };
 
@@ -134,10 +139,13 @@ export const getExpectedTAT = async (originPin, destinationPin, mot = 'S') => {
 // ============================================
 export const createWarehouse = async (warehouseData) => {
   try {
-    const response = await axiosClient.post(`/api/backend/clientwarehouse/create/`, warehouseData);
+    const response = await axiosClient.post(
+      `/api/backend/clientwarehouse/create/`,
+      warehouseData
+    );
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Create Warehouse');
+    return handleError(error, "Create Warehouse");
   }
 };
 
@@ -146,10 +154,13 @@ export const createWarehouse = async (warehouseData) => {
 // ============================================
 export const updateWarehouse = async (warehouseData) => {
   try {
-    const response = await axiosClient.post(`/api/backend/clientwarehouse/update/`, warehouseData);
+    const response = await axiosClient.post(
+      `/api/backend/clientwarehouse/update/`,
+      warehouseData
+    );
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Update Warehouse');
+    return handleError(error, "Update Warehouse");
   }
 };
 
@@ -167,32 +178,37 @@ export const calculateShippingCost = async (shipmentData) => {
       data: {
         totalAmount: fee,
         baseCharge: 50,
-        codCharges: shipmentData.paymentMode === 'COD' ? 20 : 0,
+        codCharges: shipmentData.paymentMode === "COD" ? 20 : 0,
         taxes: 12.6,
-        zone: 'A',
-        chargedWeight: shipmentData.chargeableWeight || 500
-      }
+        zone: "A",
+        chargedWeight: shipmentData.chargeableWeight || 500,
+      },
     };
   }
 
   try {
     const params = {
-      md: shipmentData.mode || 'S',
-      ss: 'Delivered',
+      md: shipmentData.mode || "S",
+      ss: "Delivered",
       d_pin: shipmentData.destinationPin,
       o_pin: shipmentData.originPin,
       cgm: shipmentData.chargeableWeight || 500,
-      pt: shipmentData.paymentMode || 'Pre-paid',
-      cod: shipmentData.codAmount || 0
+      pt: shipmentData.paymentMode || "Pre-paid",
+      cod: shipmentData.codAmount || 0,
     };
 
-    const response = await axiosClient.get(`/api/kinko/v1/invoice/charges/.json`, { params });
+    const response = await axiosClient.get(
+      `/api/kinko/v1/invoice/charges/.json`,
+      { params }
+    );
 
     // ✅ Delhivery array return karta hai — pehla element lo
-    const rawData = Array.isArray(response.data) ? response.data[0] : response.data;
+    const rawData = Array.isArray(response.data)
+      ? response.data[0]
+      : response.data;
 
     if (!rawData) {
-      throw new Error('Empty response from Delhivery shipping cost API');
+      throw new Error("Empty response from Delhivery shipping cost API");
     }
 
     const formattedData = {
@@ -207,17 +223,23 @@ export const calculateShippingCost = async (shipmentData) => {
         sgst: rawData.tax_data?.SGST || 0,
         cgst: rawData.tax_data?.CGST || 0,
         igst: rawData.tax_data?.IGST || 0,
-        total: (rawData.tax_data?.SGST || 0) + (rawData.tax_data?.CGST || 0) + (rawData.tax_data?.IGST || 0)
+        total:
+          (rawData.tax_data?.SGST || 0) +
+          (rawData.tax_data?.CGST || 0) +
+          (rawData.tax_data?.IGST || 0),
       },
       // ✅ totalAmount guaranteed — multiple fallbacks
       totalAmount: rawData.total_amount || rawData.gross_amount || 0,
-      status: rawData.status
+      status: rawData.status,
     };
 
     return { success: true, data: formattedData };
   } catch (error) {
-    console.error('❌ Shipping cost calculation failed:', error.response?.data || error.message);
-    return handleError(error, 'Calculate Shipping Cost');
+    console.error(
+      "❌ Shipping cost calculation failed:",
+      error.response?.data || error.message
+    );
+    return handleError(error, "Calculate Shipping Cost");
   }
 };
 
@@ -229,57 +251,61 @@ export const createShipment = async (shipmentData) => {
     return {
       success: true,
       data: {
-        packages: [{
-          waybill: `MOCK${Date.now()}`,
-          status: "Success"
-        }]
-      }
+        packages: [
+          {
+            waybill: `MOCK${Date.now()}`,
+            status: "Success",
+          },
+        ],
+      },
     };
   }
 
   try {
     const formatData = {
-      shipments: [{
-        name: shipmentData.customerName,
-        add: shipmentData.customerAddress,
-        pin: shipmentData.customerPincode,
-        city: shipmentData.customerCity,
-        state: shipmentData.customerState,
-        country: shipmentData.customerCountry || "India",
-        phone: shipmentData.customerPhone,
+      shipments: [
+        {
+          name: shipmentData.customerName,
+          add: shipmentData.customerAddress,
+          pin: shipmentData.customerPincode,
+          city: shipmentData.customerCity,
+          state: shipmentData.customerState,
+          country: shipmentData.customerCountry || "India",
+          phone: shipmentData.customerPhone,
 
-        order: shipmentData.orderNumber,
-        payment_mode: shipmentData.paymentMode || "Prepaid",
+          order: shipmentData.orderNumber,
+          payment_mode: shipmentData.paymentMode || "Prepaid",
 
-        products_desc: shipmentData.productDescription,
-        cod_amount: shipmentData.codAmount || 0,
+          products_desc: shipmentData.productDescription,
+          cod_amount: shipmentData.codAmount || 0,
 
-        // ✅ Correct date format
-        order_date: new Date().toISOString().split("T")[0],
+          // ✅ Correct date format
+          order_date: new Date().toISOString().split("T")[0],
 
-        total_amount: shipmentData.totalAmount,
-        quantity: shipmentData.quantity || 1,
+          total_amount: shipmentData.totalAmount,
+          quantity: shipmentData.quantity || 1,
 
-        weight: shipmentData.weight || 0.5,
+          weight: shipmentData.weight || 0.5,
 
-        seller_name: shipmentData.sellerName,
-        seller_add: shipmentData.sellerAddress,
+          seller_name: shipmentData.sellerName,
+          seller_add: shipmentData.sellerAddress,
 
-        shipping_mode: "Surface",
-        address_type: "home",
+          shipping_mode: "Surface",
+          address_type: "home",
 
-        // ✅ Return address required
-        return_pin: shipmentData.customerPincode,
-        return_city: shipmentData.customerCity,
-        return_phone: shipmentData.customerPhone,
-        return_add: shipmentData.customerAddress,
-        return_state: shipmentData.customerState,
-        return_country: "India"
-      }],
+          // ✅ Return address required
+          return_pin: shipmentData.customerPincode,
+          return_city: shipmentData.customerCity,
+          return_phone: shipmentData.customerPhone,
+          return_add: shipmentData.customerAddress,
+          return_state: shipmentData.customerState,
+          return_country: "India",
+        },
+      ],
 
       pickup_location: {
-        name: shipmentData.pickupLocationName
-      }
+        name: shipmentData.pickupLocationName,
+      },
     };
 
     const response = await axiosClient.post(
@@ -289,7 +315,6 @@ export const createShipment = async (shipmentData) => {
     );
 
     return { success: true, data: response.data };
-
   } catch (error) {
     return handleError(error, "Create Shipment");
   }
@@ -300,10 +325,13 @@ export const createShipment = async (shipmentData) => {
 // ============================================
 export const updateShipment = async (waybill, updateData) => {
   try {
-    const response = await axiosClient.post(`/api/p/edit`, { waybill, ...updateData });
+    const response = await axiosClient.post(`/api/p/edit`, {
+      waybill,
+      ...updateData,
+    });
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Update Shipment');
+    return handleError(error, "Update Shipment");
   }
 };
 
@@ -312,10 +340,13 @@ export const updateShipment = async (waybill, updateData) => {
 // ============================================
 export const cancelShipment = async (waybill) => {
   try {
-    const response = await axiosClient.post(`/api/p/edit`, { waybill, cancellation: true });
+    const response = await axiosClient.post(`/api/p/edit`, {
+      waybill,
+      cancellation: true,
+    });
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Cancel Shipment');
+    return handleError(error, "Cancel Shipment");
   }
 };
 
@@ -328,42 +359,48 @@ export const createPickupRequest = async (pickupData) => {
       pickup_location: pickupData.pickupLocation,
       pickup_date: pickupData.pickupDate,
       pickup_time: pickupData.pickupTime,
-      expected_package_count: pickupData.packageCount
+      expected_package_count: pickupData.packageCount,
     });
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Create Pickup Request');
+    return handleError(error, "Create Pickup Request");
   }
 };
 
 // ============================================
 // 11. GENERATE SHIPPING LABEL
 // ============================================
-export const generateShippingLabel = async (waybill, pdfSize = 'A4') => {
+export const generateShippingLabel = async (waybill, pdfSize = "A4") => {
   try {
     const response = await axiosClient.get(`/api/p/packing_slip`, {
       params: { wbns: waybill, pdf: true, pdf_size: pdfSize },
-      responseType: 'arraybuffer'
+      responseType: "arraybuffer",
     });
-    return { success: true, data: response.data, contentType: response.headers['content-type'] };
+    return {
+      success: true,
+      data: response.data,
+      contentType: response.headers["content-type"],
+    };
   } catch (error) {
-    return handleError(error, 'Generate Shipping Label');
+    return handleError(error, "Generate Shipping Label");
   }
 };
 
 // ============================================
 // 12. TRACK SHIPMENT
 // ============================================
-export const trackShipment = async (waybill = '', orderId = '') => {
+export const trackShipment = async (waybill = "", orderId = "") => {
   try {
     const params = {};
     if (waybill) params.waybill = waybill;
     if (orderId) params.ref_ids = orderId;
 
-    const response = await axiosClient.get(`/api/v1/packages/json/`, { params });
+    const response = await axiosClient.get(`/api/v1/packages/json/`, {
+      params,
+    });
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Track Shipment');
+    return handleError(error, "Track Shipment");
   }
 };
 
@@ -372,30 +409,33 @@ export const trackShipment = async (waybill = '', orderId = '') => {
 // ============================================
 export const updateEwaybill = async (waybill, ewaybillData) => {
   try {
-    const response = await axiosClient.post(`/api/rest/ewaybill/${waybill}/`, ewaybillData);
+    const response = await axiosClient.post(
+      `/api/rest/ewaybill/${waybill}/`,
+      ewaybillData
+    );
     return { success: true, data: response.data };
   } catch (error) {
-    return handleError(error, 'Update E-waybill');
+    return handleError(error, "Update E-waybill");
   }
 };
 
 // ============================================
 // 14. DOWNLOAD DOCUMENT
 // ============================================
-export const downloadDocument = async (waybill, documentType = 'invoice') => {
+export const downloadDocument = async (waybill, documentType = "invoice") => {
   try {
     let endpoint;
     let params;
 
-    if (documentType === 'invoice') {
+    if (documentType === "invoice") {
       // Invoice endpoint
       endpoint = `/api/p/packing_slip`;
       params = { wbns: waybill, pdf: true };
-    } else if (documentType === 'label') {
+    } else if (documentType === "label") {
       // Label endpoint
       endpoint = `/api/p/packing_slip`;
       params = { wbns: waybill, pdf: true };
-    } else if (documentType === 'pod') {
+    } else if (documentType === "pod") {
       // POD endpoint
       endpoint = `/api/pod/`;
       params = { waybill };
@@ -406,13 +446,19 @@ export const downloadDocument = async (waybill, documentType = 'invoice') => {
 
     const response = await axiosClient.get(endpoint, {
       params,
-      responseType: 'arraybuffer',
+      responseType: "arraybuffer",
     });
 
-    const contentType = response.headers['content-type'] || 'application/pdf';
-    if (contentType.includes('application/json')) {
-      const text = Buffer.from(response.data).toString('utf8');
-      throw new Error(`Delhivery returned JSON instead of PDF: ${text}`);
+    const contentType = response.headers["content-type"] || "application/pdf";
+    if (contentType.includes("application/json")) {
+      const text = Buffer.from(response.data).toString("utf8");
+      const jsonData = JSON.parse(text);
+
+      return {
+        success: true,
+        data: jsonData,
+        contentType: "application/json",
+      };
     }
 
     return {
@@ -421,7 +467,7 @@ export const downloadDocument = async (waybill, documentType = 'invoice') => {
       contentType,
     };
   } catch (error) {
-    return handleError(error, 'Download Document');
+    return handleError(error, "Download Document");
   }
 };
 
@@ -431,13 +477,14 @@ export const downloadDocument = async (waybill, documentType = 'invoice') => {
 const handleError = (error, operation) => {
   const errorDetails = {
     operation,
-    message: error.response?.data?.error ||
-             error.response?.data?.message ||
-             error.message ||
-             'Unknown error occurred',
+    message:
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      error.message ||
+      "Unknown error occurred",
     status: error.response?.status,
     statusText: error.response?.statusText,
-    details: error.response?.data
+    details: error.response?.data,
   };
 
   console.error(`❌ ${operation} Error:`, errorDetails);
@@ -465,6 +512,5 @@ export default {
   generateShippingLabel,
   updateEwaybill,
   downloadDocument,
-  isConfigured
+  isConfigured,
 };
-
