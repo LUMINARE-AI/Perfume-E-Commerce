@@ -88,7 +88,7 @@ Message: ${form.message}`;
             </p>
             <p>
               <span className="text-gray-400">Address:</span>{" "}
-              Raj talkies road, Bda kuaa, Tonk, Rajasthan, India
+              Raj talkies road, Bada Kuan, Tonk, Rajasthan, India
             </p>
 
             <p className="mt-6 text-gray-400">
