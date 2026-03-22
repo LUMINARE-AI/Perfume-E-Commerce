@@ -14,7 +14,7 @@ import {
   FiArrowLeft,
   FiX,
 } from "react-icons/fi";
-import { downloadDocument} from "../api/delhivery";
+import { downloadDocument } from "../api/delhivery";
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -45,33 +45,38 @@ export default function OrderDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-const handleDownloadInvoice = async () => {
-  try {
-    if (!order?.delivery?.awb) {
-      toast.info("Invoice not available yet");
-      return;
+  const handleDownloadInvoice = async () => {
+    try {
+      if (order.status === "cancelled") {
+        toast.info("Invoice not available for cancelled orders");
+        return;
+      }
+
+      if (!order?.delivery?.awb) {
+        toast.info("Invoice not available yet");
+        return;
+      }
+
+      setDownloading(true);
+
+      const res = await downloadDocument(order.delivery.awb, "invoice");
+
+      const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
+
+      if (!pdfUrl) {
+        throw new Error("PDF link not found");
+      }
+
+      window.open(pdfUrl, "_blank");
+
+      toast.success("Invoice opened successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to download invoice");
+    } finally {
+      setDownloading(false);
     }
-
-    setDownloading(true);
-
-    const res = await downloadDocument(order.delivery.awb, "invoice");
-
-    const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
-
-    if (!pdfUrl) {
-      throw new Error("PDF link not found");
-    }
-
-    window.open(pdfUrl, "_blank");
-
-    toast.success("Invoice opened successfully");
-  } catch (error) {
-    console.error(error);
-    toast.error("Failed to download invoice");
-  } finally {
-    setDownloading(false);
-  }
-};
+  };
 
   const cancelOrder = async () => {
     const finalReason =
