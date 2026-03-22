@@ -172,8 +172,8 @@ export default function Footer() {
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-600 uppercase tracking-wider font-light">Developed By</span>
             <div className="flex items-center gap-2">
-              <a href="https://www.linkedin.com/in/aditya-jain-050159327/" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-[#D4AF37] transition-colors duration-300">
-                Aditya Jain
+              <a target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-[#D4AF37] transition-colors duration-300">
+                Luminare AI
               </a>
             </div>
           </div>
