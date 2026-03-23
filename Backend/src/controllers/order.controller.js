@@ -95,7 +95,7 @@ export const createOrder = asyncHandler(async (req, res) => {
   // Send email notification to admin
   try {
     await sendEmail({
-      to: "adityajain907935@gmail.com",
+      to: "binkhalid0401@gmail.com",
       subject: "🛒 New Order Received!",
       html: getOrderEmailTemplate(order),
     });
