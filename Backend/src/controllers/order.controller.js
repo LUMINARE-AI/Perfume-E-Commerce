@@ -5,6 +5,7 @@ import { ApiError } from "../utils/ApiError.js";
 import mongoose from "mongoose";
 import { createShipment } from "../services/delhivery.service.js";
 import { razorpay } from "../services/razorpay.service.js";
+import sendEmail from "../utils/sendEmail.js";
 
 /**
  * Create Order
@@ -90,6 +91,17 @@ export const createOrder = asyncHandler(async (req, res) => {
     status: "pending",
     isPaid: false,
   });
+
+  // Send email notification to admin
+  try {
+    await sendEmail({
+      to: "adityajain907935@gmail.com",
+      subject: "🛒 New Order Received!",
+      html: getOrderEmailTemplate(order),
+    });
+  } catch (err) {
+    console.log("Email failed but order created ✅");
+  }
 
   // No shipment for COD orders until they verified by  admin
   if (normalizedPaymentMethod === "COD") {
@@ -420,3 +432,36 @@ export const updateOrderDelivery = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, order, "Delivery info updated"));
 });
+
+const getOrderEmailTemplate = (order) => {
+  return `
+    <div style="font-family: Arial; padding: 20px;">
+      <h2>🛒 New Order Received!</h2>
+      
+      <p><strong>Order ID:</strong> ${order._id}</p>
+      <p><strong>Total:</strong> ₹${order.totalPrice}</p>
+      <p><strong>Payment:</strong> ${order.paymentMethod}</p>
+
+      <h3>📦 Customer Details:</h3>
+      <p>${order.shippingAddress.name}</p>
+      <p>${order.shippingAddress.phone}</p>
+      <p>${order.shippingAddress.address}, ${order.shippingAddress.city}</p>
+
+      <h3>🧾 Items:</h3>
+      <ul>
+        ${order.items
+          .map((item) => `<li>${item.name} × ${item.qty} - ₹${item.price}</li>`)
+          .join("")}
+      </ul>
+
+      <br/>
+
+      <a href="https://binkhalid.in/admin/orders"
+         style="background:black;color:white;padding:10px 15px;text-decoration:none;">
+         View Order
+      </a>
+
+      <p style="margin-top:20px;">- BinKhalid Perfumes 🚀</p>
+    </div>
+  `;
+};
