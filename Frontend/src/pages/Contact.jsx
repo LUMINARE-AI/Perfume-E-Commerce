@@ -33,7 +33,7 @@ const handleSubmit = async (e) => {
 
     await api.post("/contact", form);
 
-    showSuccess("Message sent successfully ✅");
+    showSuccess("Message sent successfully, We Will get back to you soon! ✅");
     setForm({ name: "", email: "", message: "" });
 
   } catch (err) {
