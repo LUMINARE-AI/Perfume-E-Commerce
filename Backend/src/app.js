@@ -10,6 +10,7 @@ import uploadRoutes from "./routes/upload.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import delhiveryRoutes from "./routes/delhivery.routes.js";
 import razorpayRoutes from "./routes/razorpay.routes.js";
+import contactRoutes from "./routes/contact.routes.js";
 
 
 const app = express();
@@ -58,5 +59,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/razorpay", razorpayRoutes);
+app.use("/api/contact", contactRoutes);
 
 export default app;

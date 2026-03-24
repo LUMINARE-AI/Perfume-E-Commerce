@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import { useToast } from "../contexts/ToastContext";
+import api from "../api/axios";
 
 export default function Contact() {
   const [form, setForm] = useState({
@@ -10,13 +11,16 @@ export default function Contact() {
     message: "",
   });
 
-  const { error: showError } = useToast();
+  const { error: showError, success: showSuccess } = useToast();
+  const [Loading, setLoading] = useState(false);
+
+
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
 
   if (!form.name || !form.email || !form.message) {
@@ -24,15 +28,20 @@ const handleSubmit = (e) => {
     return;
   }
 
-  const phoneNumber = "918432666699";
-  const text = `New Contact Message:
-Name: ${form.name}
-Email: ${form.email}
-Message: ${form.message}`;
+  try {
+    setLoading(true);
 
-  const encodedText = encodeURIComponent(text);
+    await api.post("/api/contact", form);
 
-  window.open(`https://wa.me/${phoneNumber}?text=${encodedText}`, "_blank");
+    showSuccess("Message sent successfully ✅");
+    setForm({ name: "", email: "", message: "" });
+
+  } catch (err) {
+    console.error(err);
+    showError(err.response?.data?.message || "Failed to send message ❌");
+  } finally {
+    setLoading(false);
+  }
 };
 
   return (
@@ -71,8 +80,8 @@ Message: ${form.message}`;
               />
             </div>
 
-            <Button type="submit">
-              Send Message
+            <Button type="submit" disabled={Loading}>
+              {Loading ? "Sending..." : "Send Message"}
             </Button>
           </form>
 
