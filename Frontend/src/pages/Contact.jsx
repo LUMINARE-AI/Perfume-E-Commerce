@@ -31,7 +31,7 @@ const handleSubmit = async (e) => {
   try {
     setLoading(true);
 
-    await api.post("/api/contact", form);
+    await api.post("/contact", form);
 
     showSuccess("Message sent successfully ✅");
     setForm({ name: "", email: "", message: "" });
