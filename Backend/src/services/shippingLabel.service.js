@@ -375,21 +375,25 @@ export const generateCustomShippingLabel = async (waybill) => {
       y -= 12;
     }
 
-    y -= 4;
+    // Gap so TOTAL bar never overlaps product rows
+    y -= 10;
 
-    // Total bar
-    const totalH = 24;
+    const totalH = 26;
     const totalValue = formatINR(order.totalPrice);
+    const barBottom = y - totalH;
+
     page.drawRectangle({
       x: MARGIN,
-      y: y - 8,
+      y: barBottom,
       width: PAGE_WIDTH - MARGIN * 2,
       height: totalH,
       color: soft,
     });
+
+    const totalTextY = barBottom + (totalH - 9) / 2;
     page.drawText("TOTAL", {
       x: MARGIN + 8,
-      y: y - 1,
+      y: totalTextY,
       size: 9,
       font: fontBold,
       color: ink,
@@ -400,7 +404,7 @@ export const generateCustomShippingLabel = async (waybill) => {
         MARGIN -
         8 -
         fontBold.widthOfTextAtSize(totalValue, 10),
-      y: y - 1,
+      y: totalTextY,
       size: 10,
       font: fontBold,
       color: ink,
