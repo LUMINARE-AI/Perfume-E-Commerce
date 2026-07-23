@@ -12,6 +12,14 @@ const BASE_URL = IS_PRODUCTION
 // 4x6 inch label in PDF points (1in = 72pt)
 const PAGE_WIDTH = 288;
 const PAGE_HEIGHT = 432;
+const MARGIN = 14;
+
+const ink = rgb(0.08, 0.08, 0.08);
+const muted = rgb(0.42, 0.42, 0.42);
+const soft = rgb(0.94, 0.94, 0.94);
+const softLine = rgb(0.82, 0.82, 0.82);
+const brandRed = rgb(0.77, 0.07, 0.19);
+const white = rgb(1, 1, 1);
 
 const formatINR = (amount) =>
   `Rs. ${Number(amount || 0).toLocaleString("en-IN", {
@@ -41,9 +49,6 @@ const wrapText = (text, font, size, maxWidth) => {
   return lines;
 };
 
-/**
- * Optional routing fields from Delhivery packing-slip JSON (not their PDF).
- */
 const fetchRoutingInfo = async (waybill) => {
   if (!DELHIVERY_API_KEY) return {};
 
@@ -76,23 +81,52 @@ const buildBarcodePng = async (waybill) =>
     bcid: "code128",
     text: String(waybill),
     scale: 3,
-    height: 14,
+    height: 12,
     includetext: false,
     backgroundcolor: "FFFFFF",
   });
 
-const drawLine = (page, y, x1 = 16, x2 = PAGE_WIDTH - 16) => {
+const drawHRule = (page, y, thickness = 0.8, color = ink) => {
   page.drawLine({
-    start: { x: x1, y },
-    end: { x: x2, y },
-    thickness: 1,
-    color: rgb(0.1, 0.1, 0.1),
+    start: { x: MARGIN, y },
+    end: { x: PAGE_WIDTH - MARGIN, y },
+    thickness,
+    color,
   });
 };
 
+const drawBadge = (page, text, fontBold, xRight, y) => {
+  const padX = 6;
+  const padY = 3;
+  const size = 8;
+  const textW = fontBold.widthOfTextAtSize(text, size);
+  const boxW = textW + padX * 2;
+  const boxH = size + padY * 2;
+  const x = xRight - boxW;
+
+  page.drawRectangle({
+    x,
+    y: y - padY,
+    width: boxW,
+    height: boxH,
+    borderColor: ink,
+    borderWidth: 1,
+    color: white,
+  });
+
+  page.drawText(text, {
+    x: x + padX,
+    y: y,
+    size,
+    font: fontBold,
+    color: ink,
+  });
+
+  return boxH;
+};
+
 /**
- * Generate a custom shipping label PDF with pdf-lib (no Chrome required).
- * No seller/return address on the label.
+ * Generate a polished custom shipping label PDF (no Chrome, no seller/return address).
  */
 export const generateCustomShippingLabel = async (waybill) => {
   try {
@@ -128,215 +162,268 @@ export const generateCustomShippingLabel = async (waybill) => {
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const barcodeImage = await pdfDoc.embedPng(barcodePng);
 
-    let y = PAGE_HEIGHT - 22;
+    // Outer frame
+    page.drawRectangle({
+      x: 6,
+      y: 6,
+      width: PAGE_WIDTH - 12,
+      height: PAGE_HEIGHT - 12,
+      borderColor: softLine,
+      borderWidth: 1,
+    });
 
-    // Header
+    let y = PAGE_HEIGHT - 24;
+
+    // ── Header ──────────────────────────────────────────────
     page.drawText(brand, {
-      x: 16,
+      x: MARGIN,
       y,
-      size: 12,
+      size: 13,
       font: fontBold,
-      color: rgb(0.05, 0.05, 0.05),
+      color: ink,
     });
     page.drawText("DELHIVERY", {
-      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize("DELHIVERY", 10),
-      y,
-      size: 10,
+      x: PAGE_WIDTH - MARGIN - fontBold.widthOfTextAtSize("DELHIVERY", 9),
+      y: y + 1,
+      size: 9,
       font: fontBold,
-      color: rgb(0.77, 0.07, 0.19),
+      color: brandRed,
     });
 
-    y -= 10;
-    drawLine(page, y);
     y -= 12;
+    drawHRule(page, y, 1.2);
+    y -= 14;
 
-    // Barcode
-    const barcodeWidth = 220;
-    const barcodeHeight = 48;
+    // ── Barcode block ───────────────────────────────────────
+    const barcodeWidth = 230;
+    const barcodeHeight = 46;
     page.drawImage(barcodeImage, {
       x: (PAGE_WIDTH - barcodeWidth) / 2,
       y: y - barcodeHeight,
       width: barcodeWidth,
       height: barcodeHeight,
     });
-    y -= barcodeHeight + 6;
+    y -= barcodeHeight + 10;
 
-    const awbWidth = fontBold.widthOfTextAtSize(String(waybill), 11);
-    page.drawText(String(waybill), {
+    const awb = String(waybill);
+    const awbWidth = fontBold.widthOfTextAtSize(awb, 12);
+    page.drawText(awb, {
       x: (PAGE_WIDTH - awbWidth) / 2,
       y,
-      size: 11,
+      size: 12,
       font: fontBold,
+      color: ink,
     });
 
-    y -= 10;
-    drawLine(page, y);
-    y -= 18;
+    y -= 12;
+    drawHRule(page, y, 0.7, softLine);
+    y -= 8;
 
-    // PIN + sort code
-    page.drawText(String(address.pincode || ""), {
-      x: 16,
-      y,
-      size: 16,
-      font: fontBold,
+    // ── Route strip (PIN + sort) ─────────────────────────────
+    const routeH = 34;
+    page.drawRectangle({
+      x: MARGIN,
+      y: y - routeH + 8,
+      width: PAGE_WIDTH - MARGIN * 2,
+      height: routeH,
+      color: soft,
     });
+
+    const pin = String(address.pincode || "");
+    page.drawText(pin, {
+      x: MARGIN + 8,
+      y: y - 12,
+      size: 18,
+      font: fontBold,
+      color: ink,
+    });
+
     if (sortCode) {
-      page.drawText(String(sortCode), {
-        x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize(String(sortCode), 14),
-        y,
-        size: 14,
+      const sc = String(sortCode);
+      page.drawText(sc, {
+        x: PAGE_WIDTH - MARGIN - 8 - fontBold.widthOfTextAtSize(sc, 16),
+        y: y - 11,
+        size: 16,
         font: fontBold,
+        color: ink,
       });
     }
 
-    y -= 10;
-    drawLine(page, y);
-    y -= 16;
-
-    // Shipping address
-    page.drawText("SHIPPING ADDRESS", {
-      x: 16,
-      y,
-      size: 8,
-      font: fontBold,
-      color: rgb(0.25, 0.25, 0.25),
-    });
-    page.drawText(paymentMode, {
-      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize(paymentMode, 10),
-      y,
-      size: 10,
-      font: fontBold,
-    });
-
+    y -= routeH + 4;
+    drawHRule(page, y, 0.7, softLine);
     y -= 14;
-    page.drawText(String(address.name || ""), {
-      x: 16,
+
+    // ── Ship-to + payment badge ─────────────────────────────
+    page.drawText("SHIP TO", {
+      x: MARGIN,
+      y,
+      size: 7.5,
+      font: fontBold,
+      color: muted,
+    });
+    drawBadge(page, paymentMode, fontBold, PAGE_WIDTH - MARGIN, y - 1);
+
+    y -= 15;
+    page.drawText(String(address.name || "").toUpperCase(), {
+      x: MARGIN,
       y,
       size: 11,
       font: fontBold,
+      color: ink,
     });
 
     y -= 13;
     const addressLines = wrapText(
-      [
-        address.address,
-        address.city,
-        address.state,
-        address.country || "India",
-      ]
+      [address.address, address.city, address.state, address.country || "India"]
         .filter(Boolean)
         .join(", "),
       font,
       9,
-      PAGE_WIDTH - 32
+      PAGE_WIDTH - MARGIN * 2
     );
 
     for (const line of addressLines.slice(0, 4)) {
-      page.drawText(line, { x: 16, y, size: 9, font });
+      page.drawText(line, { x: MARGIN, y, size: 9, font, color: ink });
       y -= 11;
     }
 
-    page.drawText(`PIN: ${address.pincode || ""}`, {
-      x: 16,
-      y,
-      size: 9,
-      font: fontBold,
-    });
-    y -= 12;
+    y -= 2;
+    const meta = [
+      address.pincode ? `PIN ${address.pincode}` : null,
+      address.phone ? `Ph ${address.phone}` : null,
+    ]
+      .filter(Boolean)
+      .join("   ·   ");
 
-    if (address.phone) {
-      page.drawText(`Ph: ${address.phone}`, {
-        x: 16,
+    if (meta) {
+      page.drawText(meta, {
+        x: MARGIN,
         y,
-        size: 9,
-        font,
+        size: 8.5,
+        font: fontBold,
+        color: muted,
       });
       y -= 12;
     }
 
     y -= 2;
-    drawLine(page, y);
+    drawHRule(page, y, 0.7, softLine);
     y -= 14;
 
-    // Products
+    // ── Products ────────────────────────────────────────────
     page.drawText("PRODUCT", {
-      x: 16,
+      x: MARGIN,
       y,
-      size: 8,
+      size: 7.5,
       font: fontBold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: muted,
     });
     page.drawText("AMOUNT", {
-      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize("AMOUNT", 8),
+      x: PAGE_WIDTH - MARGIN - fontBold.widthOfTextAtSize("AMOUNT", 7.5),
       y,
-      size: 8,
+      size: 7.5,
       font: fontBold,
-      color: rgb(0.3, 0.3, 0.3),
+      color: muted,
     });
-    y -= 8;
-    drawLine(page, y, 16, PAGE_WIDTH - 16);
+
+    y -= 7;
+    drawHRule(page, y, 0.6, softLine);
     y -= 12;
 
-    const maxItemRows = 5;
+    const maxItemRows = 4;
     for (const item of items.slice(0, maxItemRows)) {
-      const name = `${item.name}${item.qty > 1 ? ` x ${item.qty}` : ""}`;
+      const name = `${item.name}${item.qty > 1 ? `  x${item.qty}` : ""}`;
       const amount = formatINR(item.price * item.qty);
-      const nameLines = wrapText(name, font, 9, 170);
+      const nameLines = wrapText(name, font, 9, 168);
 
-      page.drawText(nameLines[0] || "", { x: 16, y, size: 9, font });
-      page.drawText(amount, {
-        x: PAGE_WIDTH - 16 - font.widthOfTextAtSize(amount, 9),
+      page.drawText(nameLines[0] || "", {
+        x: MARGIN,
         y,
         size: 9,
         font,
+        color: ink,
+      });
+      page.drawText(amount, {
+        x: PAGE_WIDTH - MARGIN - font.widthOfTextAtSize(amount, 9),
+        y,
+        size: 9,
+        font,
+        color: ink,
       });
       y -= 11;
 
       for (const extra of nameLines.slice(1, 2)) {
-        page.drawText(extra, { x: 16, y, size: 9, font });
+        page.drawText(extra, {
+          x: MARGIN,
+          y,
+          size: 9,
+          font,
+          color: muted,
+        });
         y -= 11;
       }
     }
 
     if (items.length > maxItemRows) {
       page.drawText(`+${items.length - maxItemRows} more item(s)`, {
-        x: 16,
+        x: MARGIN,
         y,
         size: 8,
         font,
-        color: rgb(0.4, 0.4, 0.4),
+        color: muted,
       });
-      y -= 11;
+      y -= 12;
     }
 
-    y -= 2;
-    const totalLabel = "Total";
+    y -= 4;
+
+    // Total bar
+    const totalH = 24;
     const totalValue = formatINR(order.totalPrice);
-    page.drawText(totalLabel, { x: 16, y, size: 10, font: fontBold });
+    page.drawRectangle({
+      x: MARGIN,
+      y: y - 8,
+      width: PAGE_WIDTH - MARGIN * 2,
+      height: totalH,
+      color: soft,
+    });
+    page.drawText("TOTAL", {
+      x: MARGIN + 8,
+      y: y - 1,
+      size: 9,
+      font: fontBold,
+      color: ink,
+    });
     page.drawText(totalValue, {
-      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize(totalValue, 10),
-      y,
+      x:
+        PAGE_WIDTH -
+        MARGIN -
+        8 -
+        fontBold.widthOfTextAtSize(totalValue, 10),
+      y: y - 1,
       size: 10,
       font: fontBold,
+      color: ink,
     });
 
-    // Footer
-    page.drawText(
-      `Order: ${String(order._id).slice(-8).toUpperCase()}`,
-      {
-        x: 16,
-        y: 16,
-        size: 7,
-        font,
-        color: rgb(0.35, 0.35, 0.35),
-      }
-    );
-    page.drawText("No returns accepted", {
-      x: PAGE_WIDTH - 16 - font.widthOfTextAtSize("No returns accepted", 7),
-      y: 16,
+    // ── Footer ──────────────────────────────────────────────
+    const footerY = 18;
+    drawHRule(page, footerY + 10, 0.6, softLine);
+
+    const orderRef = `Order ${String(order._id).slice(-8).toUpperCase()}`;
+    page.drawText(orderRef, {
+      x: MARGIN,
+      y: footerY,
       size: 7,
       font,
-      color: rgb(0.35, 0.35, 0.35),
+      color: muted,
+    });
+    page.drawText("No returns accepted", {
+      x: PAGE_WIDTH - MARGIN - font.widthOfTextAtSize("No returns accepted", 7),
+      y: footerY,
+      size: 7,
+      font,
+      color: muted,
     });
 
     const pdfBytes = await pdfDoc.save();
