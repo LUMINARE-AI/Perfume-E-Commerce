@@ -350,7 +350,7 @@ export const generateCustomShippingLabel = async (waybill) => {
         font,
         color: ink,
       });
-      y -= 11;
+      y -= 12;
 
       for (const extra of nameLines.slice(1, 2)) {
         page.drawText(extra, {
@@ -375,8 +375,37 @@ export const generateCustomShippingLabel = async (waybill) => {
       y -= 12;
     }
 
-    // Gap so TOTAL bar never overlaps product rows
-    y -= 10;
+    // Shipping charge line (explains total vs items subtotal)
+    const itemsSubtotal = items.reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0),
+      0
+    );
+    const shippingCharge =
+      order.shippingPrice != null && order.shippingPrice !== undefined
+        ? Number(order.shippingPrice)
+        : Math.max(0, Number(order.totalPrice || 0) - itemsSubtotal);
+
+    y -= 2;
+    page.drawText("Shipping", {
+      x: MARGIN,
+      y,
+      size: 9,
+      font,
+      color: muted,
+    });
+    const shippingText =
+      shippingCharge > 0 ? formatINR(shippingCharge) : "Free";
+    page.drawText(shippingText, {
+      x: PAGE_WIDTH - MARGIN - font.widthOfTextAtSize(shippingText, 9),
+      y,
+      size: 9,
+      font,
+      color: muted,
+    });
+    y -= 12;
+
+    // Gap so TOTAL bar never overlaps rows above
+    y -= 8;
 
     const totalH = 26;
     const totalValue = formatINR(order.totalPrice);
