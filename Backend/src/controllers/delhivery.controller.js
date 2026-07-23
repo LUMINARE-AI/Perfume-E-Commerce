@@ -1,4 +1,5 @@
 import delhiveryService from "../services/delhivery.service.js";
+import { generateCustomShippingLabel } from "../services/shippingLabel.service.js";
 
 export const fetchWaybills = async (req, res) => {
   try {
@@ -385,7 +386,6 @@ export const createPickupRequest = async (req, res) => {
 export const generateShippingLabel = async (req, res) => {
   try {
     const { waybill } = req.params;
-    const { pdfSize = "A4" } = req.query;
 
     if (!waybill) {
       return res.status(400).json({
@@ -394,10 +394,8 @@ export const generateShippingLabel = async (req, res) => {
       });
     }
 
-    const result = await delhiveryService.generateShippingLabel(
-      waybill,
-      pdfSize
-    );
+    // Custom label from order data — no seller/return address on print
+    const result = await generateCustomShippingLabel(waybill);
 
     if (result.success) {
       res.setHeader("Content-Type", result.contentType || "application/pdf");
@@ -410,7 +408,7 @@ export const generateShippingLabel = async (req, res) => {
 
     return res.status(400).json({
       success: false,
-      message: "Failed to generate shipping label",
+      message: result.error?.message || "Failed to generate shipping label",
       error: result.error,
     });
   } catch (error) {
