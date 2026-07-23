@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getOrderByIdApi } from "../api/orders";
-import { getTAT } from "../api/delhivery";
-import { downloadDocument } from "../api/delhivery";
+import { getTAT, downloadDocument, openPdfResponse } from "../api/delhivery";
 import { useToast } from "../contexts/ToastContext";
 import Button from "../components/ui/Button";
 import {
@@ -90,14 +89,7 @@ export default function OrderSuccess() {
       setInvoiceMsg("");
 
       const res = await downloadDocument(order.delivery.awb, "invoice");
-
-      const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
-
-      if (!pdfUrl) {
-        throw new Error("PDF link not found");
-      }
-
-      window.open(pdfUrl, "_blank");
+      await openPdfResponse(res);
 
       setInvoiceMsg("success");
     } catch (error) {

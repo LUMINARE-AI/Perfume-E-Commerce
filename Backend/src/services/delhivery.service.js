@@ -24,6 +24,20 @@ const axiosClient = axios.create({
   timeout: 30000,
 });
 
+/** Rate calculator expects "Pre-paid" / "COD" */
+const toRatePaymentMode = (mode) => {
+  if (!mode) return "Pre-paid";
+  const normalized = String(mode).toLowerCase().replace(/[-\s]/g, "");
+  return normalized === "cod" ? "COD" : "Pre-paid";
+};
+
+/** Create shipment expects "Prepaid" / "COD" */
+const toShipmentPaymentMode = (mode) => {
+  if (!mode) return "Prepaid";
+  const normalized = String(mode).toLowerCase().replace(/[-\s]/g, "");
+  return normalized === "cod" ? "COD" : "Prepaid";
+};
+
 // ============================================
 // 1. WAYBILL NUMBERS
 // ============================================
@@ -178,7 +192,7 @@ export const calculateShippingCost = async (shipmentData) => {
       data: {
         totalAmount: fee,
         baseCharge: 50,
-        codCharges: shipmentData.paymentMode === "COD" ? 20 : 0,
+        codCharges: toRatePaymentMode(shipmentData.paymentMode) === "COD" ? 20 : 0,
         taxes: 12.6,
         zone: "A",
         chargedWeight: shipmentData.chargeableWeight || 500,
@@ -193,7 +207,7 @@ export const calculateShippingCost = async (shipmentData) => {
       d_pin: shipmentData.destinationPin,
       o_pin: shipmentData.originPin,
       cgm: shipmentData.chargeableWeight || 500,
-      pt: shipmentData.paymentMode || "Pre-paid",
+      pt: toRatePaymentMode(shipmentData.paymentMode),
       cod: shipmentData.codAmount || 0,
     };
 
@@ -274,12 +288,11 @@ export const createShipment = async (shipmentData) => {
           phone: shipmentData.customerPhone,
 
           order: shipmentData.orderNumber,
-          payment_mode: shipmentData.paymentMode || "Prepaid",
+          payment_mode: toShipmentPaymentMode(shipmentData.paymentMode),
 
           products_desc: shipmentData.productDescription,
           cod_amount: shipmentData.codAmount || 0,
 
-          // ✅ Correct date format
           order_date: new Date().toISOString().split("T")[0],
 
           total_amount: shipmentData.totalAmount,
@@ -292,14 +305,7 @@ export const createShipment = async (shipmentData) => {
 
           shipping_mode: "Surface",
           address_type: "home",
-
-          // ✅ Return address required
-          return_pin: shipmentData.customerPincode,
-          return_city: shipmentData.customerCity,
-          return_phone: shipmentData.customerPhone,
-          return_add: shipmentData.customerAddress,
-          return_state: shipmentData.customerState,
-          return_country: "India",
+          // No return_* fields — no return policy; RTO uses warehouse by default
         },
       ],
 
@@ -313,6 +319,25 @@ export const createShipment = async (shipmentData) => {
       `format=json&data=${JSON.stringify(formatData)}`,
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
+
+    const pkg = response.data?.packages?.[0];
+    const remarks = Array.isArray(pkg?.remarks)
+      ? pkg.remarks.join(", ")
+      : pkg?.remarks || pkg?.remark || "";
+
+    if (
+      !pkg?.waybill ||
+      String(pkg.status || "").toLowerCase() === "fail"
+    ) {
+      return {
+        success: false,
+        error: {
+          operation: "Create Shipment",
+          message: remarks || "Shipment creation failed at Delhivery",
+          details: response.data,
+        },
+      };
+    }
 
     return { success: true, data: response.data };
   } catch (error) {

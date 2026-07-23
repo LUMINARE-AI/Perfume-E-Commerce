@@ -14,7 +14,7 @@ import {
   FiArrowLeft,
   FiX,
 } from "react-icons/fi";
-import { downloadDocument } from "../api/delhivery";
+import { downloadDocument, openPdfResponse } from "../api/delhivery";
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -60,14 +60,7 @@ export default function OrderDetails() {
       setDownloading(true);
 
       const res = await downloadDocument(order.delivery.awb, "invoice");
-
-      const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
-
-      if (!pdfUrl) {
-        throw new Error("PDF link not found");
-      }
-
-      window.open(pdfUrl, "_blank");
+      await openPdfResponse(res);
 
       toast.success("Invoice opened successfully");
     } catch (error) {

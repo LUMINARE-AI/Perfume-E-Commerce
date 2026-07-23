@@ -94,6 +94,7 @@ export const createPickupRequest = (pickupData) =>
 export const generateShippingLabel = (waybill, pdfSize = 'A4') =>
   axios.get(`/delhivery/label/${waybill}`, {
     params: { pdfSize },
+    responseType: 'blob',
   });
 
 /**
@@ -122,6 +123,7 @@ export const updateEwaybill = (waybill, ewaybillData) =>
 export const downloadDocument = (waybill, type = 'pod') =>
   axios.get(`/delhivery/document/${waybill}`, {
     params: { type },
+    responseType: 'blob',
   });
 
 /**
@@ -136,4 +138,29 @@ export const downloadFile = (blob, filename) => {
   link.click();
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Open PDF blob or JSON link response from Delhivery document/label APIs
+ */
+export const openPdfResponse = async (res) => {
+  const contentType = res.headers?.['content-type'] || '';
+
+  if (contentType.includes('application/json')) {
+    const text = await res.data.text();
+    const json = JSON.parse(text);
+    const pdfUrl =
+      json?.packages?.[0]?.pdf_download_link ||
+      json?.pdf_download_link ||
+      json?.data?.packages?.[0]?.pdf_download_link;
+
+    if (!pdfUrl) throw new Error('PDF link not found');
+    window.open(pdfUrl, '_blank');
+    return;
+  }
+
+  const blob = new Blob([res.data], { type: 'application/pdf' });
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
 };

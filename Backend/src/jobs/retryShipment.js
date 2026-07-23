@@ -4,8 +4,18 @@ import { createShipment } from "../services/delhivery.service.js";
 export const retryPendingShipments = async () => {
   try {
     const orders = await Order.find({
-      "delivery.status": "pending",
-      "delivery.retryCount": { $lt: 3 },
+      $and: [
+        { "delivery.status": { $in: ["pending", "failed"] } },
+        {
+          $or: [
+            { "delivery.awb": { $exists: false } },
+            { "delivery.awb": null },
+            { "delivery.awb": "" },
+          ],
+        },
+        { "delivery.retryCount": { $lt: 3 } },
+        { status: { $nin: ["cancelled", "delivered"] } },
+      ],
     });
 
     for (const order of orders) {
@@ -20,7 +30,7 @@ export const retryPendingShipments = async () => {
           customerPhone: order.shippingAddress.phone,
 
           orderNumber: order._id.toString(),
-          paymentMode: order.paymentMethod === "COD" ? "COD" : "Pre-paid",
+          paymentMode: order.paymentMethod === "COD" ? "COD" : "Prepaid",
 
           productDescription: order.items.map((i) => i.name).join(", "),
           codAmount: order.paymentMethod === "COD" ? order.totalPrice : 0,
@@ -31,6 +41,8 @@ export const retryPendingShipments = async () => {
 
           pickupLocationName:
             process.env.DELHIVERY_PICKUP_NAME || "BinKhalid",
+          sellerName: process.env.SELLER_NAME || "MOHAMMAD MOOSAA KHAN",
+          sellerAddress: process.env.SELLER_ADDRESS || "Tonk Rajasthan India",
         });
 
         const awb =
@@ -41,12 +53,19 @@ export const retryPendingShipments = async () => {
         if (awb) {
           order.delivery.awb = awb;
           order.delivery.status = "pending";
+          order.delivery.error = undefined;
           order.delivery.trackingUrl = `https://www.delhivery.com/track-v2/package/${awb}`;
+        } else {
+          order.delivery.retryCount = (order.delivery.retryCount || 0) + 1;
+          order.delivery.status = "failed";
+          order.delivery.error =
+            res?.error?.message || "Shipment creation failed";
         }
-
       } catch (err) {
         console.error("Retry shipment failed:", err.message);
         order.delivery.retryCount = (order.delivery.retryCount || 0) + 1;
+        order.delivery.status = "failed";
+        order.delivery.error = err.message;
       }
 
       await order.save();

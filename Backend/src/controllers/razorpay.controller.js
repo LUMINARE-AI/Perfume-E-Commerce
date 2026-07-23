@@ -146,20 +146,28 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
 
     const delhiveryRes = await createShipment(shipmentData);
 
-    const awb = delhiveryRes?.data?.packages?.[0]?.waybill;
+    if (!delhiveryRes.success) {
+      order.delivery = {
+        provider: "delhivery",
+        status: "failed",
+        error: delhiveryRes.error?.message || "Shipment creation failed",
+      };
+    } else {
+      const awb = delhiveryRes?.data?.packages?.[0]?.waybill;
 
-    order.delivery = awb
-      ? {
-          provider: "delhivery",
-          awb,
-          status: "pending",
-          trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
-        }
-      : {
-          provider: "delhivery",
-          status: "pending",
-          error: "Shipment creation failed",
-        };
+      order.delivery = awb
+        ? {
+            provider: "delhivery",
+            awb,
+            status: "pending",
+            trackingUrl: `https://www.delhivery.com/track-v2/package/${awb}`,
+          }
+        : {
+            provider: "delhivery",
+            status: "failed",
+            error: "Shipment creation failed — no AWB",
+          };
+    }
 
     await order.save();
   } catch (err) {

@@ -96,8 +96,11 @@ export default function ProductDetails() {
       setDeliveryInfo(null);
 
       const serviceRes = await checkServiceability(pincode);
+      const serviceable =
+        serviceRes.data?.data?.serviceable ??
+        (serviceRes.data?.data?.delivery_codes?.length ?? 0) > 0;
 
-      if (!serviceRes.data.success) {
+      if (!serviceRes.data.success || !serviceable) {
         setPincodeError("Delivery not available for this pincode");
         return;
       }

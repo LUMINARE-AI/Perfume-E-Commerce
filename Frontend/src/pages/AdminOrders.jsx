@@ -5,6 +5,7 @@ import {
   createPickupRequest,
   generateShippingLabel,
   trackShipment,
+  openPdfResponse,
 } from "../api/delhivery";
 import {
   FiPackage,
@@ -227,7 +228,7 @@ function OrderRow({ order, onToast, onRefresh }) {
         customerCountry: order.shippingAddress.country || "India",
         customerPhone: order.shippingAddress.phone,
         orderNumber: order._id.toString(),
-        paymentMode: order.paymentMethod === "COD" ? "COD" : "Pre-paid",
+        paymentMode: order.paymentMethod === "COD" ? "COD" : "Prepaid",
         codAmount: order.paymentMethod === "COD" ? order.totalPrice : 0,
         productDescription: order.items.map((i) => i.name).join(", "),
         totalAmount: order.totalPrice,
@@ -281,13 +282,18 @@ function OrderRow({ order, onToast, onRefresh }) {
     if (!hasAWB) return onToast("Create shipment first to get AWB", "error");
     try {
       setActionLoading("pickup");
+      const todayIST = new Date().toLocaleDateString("en-CA", {
+        timeZone: "Asia/Kolkata",
+      });
       await createPickupRequest({
-        pickup_location:
+        pickupLocation:
           import.meta.env.VITE_DELHIVERY_PICKUP_LOCATION || "BinKhalid",
-        pickup_date: new Date().toISOString().split("T")[0],
-        pickup_time: "14:00",
-        expected_package_count: order.items.reduce((s, i) => s + i.qty, 0),
-        waybills: [delivery.awb],
+        pickupDate: todayIST,
+        pickupTime: "14:00",
+        packageCount: Math.max(
+          1,
+          order.items.reduce((s, i) => s + i.qty, 0),
+        ),
       });
       onToast("Pickup request submitted!", "success");
     } catch (e) {
@@ -298,30 +304,21 @@ function OrderRow({ order, onToast, onRefresh }) {
   };
 
   // ── Download label ─────────────────────────────────────────
-const handleLabel = async () => {
-  if (!hasAWB) return onToast("No AWB — create shipment first", "error");
+  const handleLabel = async () => {
+    if (!hasAWB) return onToast("No AWB — create shipment first", "error");
 
-  try {
-    setActionLoading("label");
-
-    const res = await generateShippingLabel(delivery.awb, "A4");
-
-    const pdfUrl = res.data?.packages?.[0]?.pdf_download_link;
-
-    if (!pdfUrl) {
-      throw new Error("Label not available");
+    try {
+      setActionLoading("label");
+      const res = await generateShippingLabel(delivery.awb, "A4");
+      await openPdfResponse(res);
+      onToast("Label opened successfully!", "success");
+    } catch (e) {
+      console.error(e);
+      onToast("Label download failed", "error");
+    } finally {
+      setActionLoading("");
     }
-
-    window.open(pdfUrl, "_blank");
-
-    onToast("Label opened successfully!", "success");
-  } catch (e) {
-    console.error(e);
-    onToast("Label download failed", "error");
-  } finally {
-    setActionLoading("");
-  }
-};
+  };
 
   const btnBase =
     "flex items-center gap-1.5 px-3 py-1.5 text-xs border transition disabled:opacity-40 disabled:cursor-not-allowed";
@@ -453,8 +450,8 @@ const handleLabel = async () => {
                 ))}
               </select>
 
-              {/* Create shipment — only for cod*/}
-              {!isPrepaid && !hasAWB && order.status !== "cancelled" && (
+              {/* Create shipment — COD + prepaid retry when AWB missing */}
+              {!hasAWB && order.status !== "cancelled" && (
                 <button
                   onClick={handleCreateShipment}
                   disabled={actionLoading === "shipment"}

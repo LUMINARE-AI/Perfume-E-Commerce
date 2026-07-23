@@ -15,39 +15,29 @@ import {
   updateEwaybill,
   downloadDocument
 } from '../controllers/delhivery.controller.js';
+import { verifyJWT } from '../middleware/auth.middleware.js';
+import { isAdmin } from '../middleware/admin.middleware.js';
 
 const router = express.Router();
 
-// Waybill routes
-router.get('/waybills', fetchWaybills);
-
-// Serviceability routes
+// Public — used on product/checkout pincode checks
 router.get('/serviceability/:pincode', checkServiceability);
 router.get('/tat', getExpectedTAT);
 
-// Warehouse routes
-router.post('/warehouse', createWarehouse);
-router.put('/warehouse/:id', updateWarehouse);
+// Authenticated — checkout + customer order docs/tracking
+router.post('/calculate-cost', verifyJWT, calculateShippingCost);
+router.get('/track', verifyJWT, trackShipment);
+router.get('/label/:waybill', verifyJWT, generateShippingLabel);
+router.get('/document/:waybill', verifyJWT, downloadDocument);
 
-// Shipping cost
-router.post('/calculate-cost', calculateShippingCost);
-
-// Shipment routes
-router.post('/shipment', createShipment);
-router.put('/shipment/:waybill', updateShipment);
-router.delete('/shipment/:waybill', cancelShipment);
-
-// Pickup routes
-router.post('/pickup', createPickupRequest);
-
-// Label and tracking
-router.get('/label/:waybill', generateShippingLabel);
-router.get('/track', trackShipment);
-
-// E-waybill
-router.put('/ewaybill/:waybill', updateEwaybill);
-
-// Documents
-router.get('/document/:waybill', downloadDocument);
+// Admin-only — shipment mutations & warehouse
+router.get('/waybills', verifyJWT, isAdmin, fetchWaybills);
+router.post('/warehouse', verifyJWT, isAdmin, createWarehouse);
+router.put('/warehouse/:id', verifyJWT, isAdmin, updateWarehouse);
+router.post('/shipment', verifyJWT, isAdmin, createShipment);
+router.put('/shipment/:waybill', verifyJWT, isAdmin, updateShipment);
+router.delete('/shipment/:waybill', verifyJWT, isAdmin, cancelShipment);
+router.post('/pickup', verifyJWT, isAdmin, createPickupRequest);
+router.put('/ewaybill/:waybill', verifyJWT, isAdmin, updateEwaybill);
 
 export default router;

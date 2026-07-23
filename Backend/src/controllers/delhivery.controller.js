@@ -44,7 +44,12 @@ export const checkServiceability = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Serviceability checked successfully",
-        data: result.data,
+        data: {
+          serviceable: result.serviceable,
+          cod: result.cod,
+          prepaid: result.prepaid,
+          delivery_codes: result.data?.delivery_codes || [],
+        },
       });
     }
 
@@ -341,7 +346,10 @@ export const createPickupRequest = async (req, res) => {
       "pickupTime",
       "packageCount",
     ];
-    const missingFields = requiredFields.filter((field) => !pickupData[field]);
+    const missingFields = requiredFields.filter((field) => {
+      const val = pickupData[field];
+      return val === undefined || val === null || val === "";
+    });
 
     if (missingFields.length > 0) {
       return res.status(400).json({
