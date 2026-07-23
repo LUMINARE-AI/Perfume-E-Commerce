@@ -1,5 +1,5 @@
 import bwipjs from "bwip-js";
-import puppeteer from "puppeteer";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import Order from "../models/order.model.js";
 import axios from "axios";
 
@@ -9,18 +9,37 @@ const BASE_URL = IS_PRODUCTION
   ? "https://track.delhivery.com"
   : "https://staging-express.delhivery.com";
 
+// 4x6 inch label in PDF points (1in = 72pt)
+const PAGE_WIDTH = 288;
+const PAGE_HEIGHT = 432;
+
 const formatINR = (amount) =>
-  `₹${Number(amount || 0).toLocaleString("en-IN", {
+  `Rs. ${Number(amount || 0).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 
-const escapeHtml = (value = "") =>
-  String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+const wrapText = (text, font, size, maxWidth) => {
+  const words = String(text || "")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return [];
+
+  const lines = [];
+  let current = words[0];
+
+  for (let i = 1; i < words.length; i++) {
+    const next = `${current} ${words[i]}`;
+    if (font.widthOfTextAtSize(next, size) <= maxWidth) {
+      current = next;
+    } else {
+      lines.push(current);
+      current = words[i];
+    }
+  }
+  lines.push(current);
+  return lines;
+};
 
 /**
  * Optional routing fields from Delhivery packing-slip JSON (not their PDF).
@@ -46,15 +65,14 @@ const fetchRoutingInfo = async (waybill) => {
         pkg.Destination ||
         pkg.center ||
         "",
-      productType: pkg.pt || pkg.payment || "",
     };
   } catch {
     return {};
   }
 };
 
-const buildBarcodeDataUrl = async (waybill) => {
-  const png = await bwipjs.toBuffer({
+const buildBarcodePng = async (waybill) =>
+  bwipjs.toBuffer({
     bcid: "code128",
     text: String(waybill),
     scale: 3,
@@ -62,205 +80,19 @@ const buildBarcodeDataUrl = async (waybill) => {
     includetext: false,
     backgroundcolor: "FFFFFF",
   });
-  return `data:image/png;base64,${png.toString("base64")}`;
-};
 
-const buildLabelHtml = ({
-  brand,
-  waybill,
-  barcodeDataUrl,
-  address,
-  paymentMode,
-  sortCode,
-  items,
-  totalPrice,
-  orderId,
-}) => {
-  const productRows = items
-    .map(
-      (item) => `
-      <tr>
-        <td>${escapeHtml(item.name)}${item.qty > 1 ? ` × ${item.qty}` : ""}</td>
-        <td class="right">${formatINR(item.price * item.qty)}</td>
-      </tr>`
-    )
-    .join("");
-
-  const fullAddress = [
-    address.address,
-    address.city,
-    address.state,
-    address.country || "India",
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      position: relative;
-      font-family: Arial, Helvetica, sans-serif;
-      color: #111;
-      width: 4in;
-      height: 6in;
-      padding: 10px 12px;
-    }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      border-bottom: 1.5px solid #111;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
-    }
-    .brand { font-size: 13px; font-weight: 700; letter-spacing: 0.2px; }
-    .carrier { font-size: 11px; font-weight: 700; color: #c41230; }
-    .barcode-wrap {
-      text-align: center;
-      padding: 6px 0 4px;
-      border-bottom: 1px solid #111;
-      margin-bottom: 8px;
-    }
-    .barcode-wrap img {
-      max-width: 100%;
-      height: 52px;
-      object-fit: contain;
-    }
-    .awb {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-    .route {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      border-bottom: 1px solid #111;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
-    }
-    .pin { font-size: 18px; font-weight: 700; }
-    .sort { font-size: 16px; font-weight: 700; }
-    .ship-block {
-      display: flex;
-      gap: 8px;
-      border-bottom: 1px solid #111;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
-      min-height: 110px;
-    }
-    .ship-main { flex: 1; }
-    .label-title {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-    .name { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
-    .addr { font-size: 11px; line-height: 1.35; }
-    .phone { font-size: 11px; margin-top: 4px; }
-    .pay {
-      width: 72px;
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      border-left: 1px solid #ddd;
-      padding-left: 6px;
-      align-self: center;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 10px;
-    }
-    th, td {
-      border-bottom: 1px solid #ddd;
-      padding: 3px 0;
-      vertical-align: top;
-    }
-    th { text-align: left; font-size: 9px; text-transform: uppercase; }
-    .right { text-align: right; white-space: nowrap; }
-    .total-row td {
-      border-bottom: none;
-      font-weight: 700;
-      padding-top: 5px;
-    }
-    .footer {
-      position: absolute;
-      bottom: 10px;
-      left: 12px;
-      right: 12px;
-      font-size: 8px;
-      color: #555;
-      border-top: 1px solid #ccc;
-      padding-top: 4px;
-      display: flex;
-      justify-content: space-between;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="brand">${escapeHtml(brand)}</div>
-    <div class="carrier">DELHIVERY</div>
-  </div>
-
-  <div class="barcode-wrap">
-    <img src="${barcodeDataUrl}" alt="AWB barcode" />
-    <div class="awb">${escapeHtml(waybill)}</div>
-  </div>
-
-  <div class="route">
-    <div class="pin">${escapeHtml(address.pincode || "")}</div>
-    <div class="sort">${escapeHtml(sortCode || "")}</div>
-  </div>
-
-  <div class="ship-block">
-    <div class="ship-main">
-      <div class="label-title">Shipping Address</div>
-      <div class="name">${escapeHtml(address.name || "")}</div>
-      <div class="addr">${escapeHtml(fullAddress)}</div>
-      <div class="addr">PIN: ${escapeHtml(address.pincode || "")}</div>
-      ${
-        address.phone
-          ? `<div class="phone">Ph: ${escapeHtml(address.phone)}</div>`
-          : ""
-      }
-    </div>
-    <div class="pay">${escapeHtml(paymentMode)}</div>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Product</th>
-        <th class="right">Amount</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${productRows}
-      <tr class="total-row">
-        <td>Total</td>
-        <td class="right">${formatINR(totalPrice)}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="footer">
-    <span>Order: ${escapeHtml(String(orderId).slice(-8).toUpperCase())}</span>
-    <span>No returns accepted</span>
-  </div>
-</body>
-</html>`;
+const drawLine = (page, y, x1 = 16, x2 = PAGE_WIDTH - 16) => {
+  page.drawLine({
+    start: { x: x1, y },
+    end: { x: x2, y },
+    thickness: 1,
+    color: rgb(0.1, 0.1, 0.1),
+  });
 };
 
 /**
- * Generate a custom shipping label PDF (no seller/return address).
+ * Generate a custom shipping label PDF with pdf-lib (no Chrome required).
+ * No seller/return address on the label.
  */
 export const generateCustomShippingLabel = async (waybill) => {
   try {
@@ -279,50 +111,241 @@ export const generateCustomShippingLabel = async (waybill) => {
       };
     }
 
-    const [barcodeDataUrl, routing] = await Promise.all([
-      buildBarcodeDataUrl(waybill),
+    const [barcodePng, routing] = await Promise.all([
+      buildBarcodePng(waybill),
       fetchRoutingInfo(waybill),
     ]);
 
     const brand = process.env.DELHIVERY_PICKUP_NAME || "BinKhalid";
-    const paymentMode =
-      order.paymentMethod === "COD" ? "COD" : "Pre-paid";
+    const paymentMode = order.paymentMethod === "COD" ? "COD" : "Pre-paid";
+    const address = order.shippingAddress || {};
+    const items = order.items || [];
+    const sortCode = routing.sortCode || "";
 
-    const html = buildLabelHtml({
-      brand,
-      waybill,
-      barcodeDataUrl,
-      address: order.shippingAddress || {},
-      paymentMode,
-      sortCode: routing.sortCode || "",
-      items: order.items || [],
-      totalPrice: order.totalPrice,
-      orderId: order._id,
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const barcodeImage = await pdfDoc.embedPng(barcodePng);
+
+    let y = PAGE_HEIGHT - 22;
+
+    // Header
+    page.drawText(brand, {
+      x: 16,
+      y,
+      size: 12,
+      font: fontBold,
+      color: rgb(0.05, 0.05, 0.05),
+    });
+    page.drawText("DELHIVERY", {
+      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize("DELHIVERY", 10),
+      y,
+      size: 10,
+      font: fontBold,
+      color: rgb(0.77, 0.07, 0.19),
     });
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    y -= 10;
+    drawLine(page, y);
+    y -= 12;
+
+    // Barcode
+    const barcodeWidth = 220;
+    const barcodeHeight = 48;
+    page.drawImage(barcodeImage, {
+      x: (PAGE_WIDTH - barcodeWidth) / 2,
+      y: y - barcodeHeight,
+      width: barcodeWidth,
+      height: barcodeHeight,
+    });
+    y -= barcodeHeight + 6;
+
+    const awbWidth = fontBold.widthOfTextAtSize(String(waybill), 11);
+    page.drawText(String(waybill), {
+      x: (PAGE_WIDTH - awbWidth) / 2,
+      y,
+      size: 11,
+      font: fontBold,
     });
 
-    try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "domcontentloaded" });
-      const pdf = await page.pdf({
-        width: "4in",
-        height: "6in",
-        printBackground: true,
-        margin: { top: "0", right: "0", bottom: "0", left: "0" },
+    y -= 10;
+    drawLine(page, y);
+    y -= 18;
+
+    // PIN + sort code
+    page.drawText(String(address.pincode || ""), {
+      x: 16,
+      y,
+      size: 16,
+      font: fontBold,
+    });
+    if (sortCode) {
+      page.drawText(String(sortCode), {
+        x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize(String(sortCode), 14),
+        y,
+        size: 14,
+        font: fontBold,
       });
-
-      return {
-        success: true,
-        data: Buffer.from(pdf),
-        contentType: "application/pdf",
-      };
-    } finally {
-      await browser.close();
     }
+
+    y -= 10;
+    drawLine(page, y);
+    y -= 16;
+
+    // Shipping address
+    page.drawText("SHIPPING ADDRESS", {
+      x: 16,
+      y,
+      size: 8,
+      font: fontBold,
+      color: rgb(0.25, 0.25, 0.25),
+    });
+    page.drawText(paymentMode, {
+      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize(paymentMode, 10),
+      y,
+      size: 10,
+      font: fontBold,
+    });
+
+    y -= 14;
+    page.drawText(String(address.name || ""), {
+      x: 16,
+      y,
+      size: 11,
+      font: fontBold,
+    });
+
+    y -= 13;
+    const addressLines = wrapText(
+      [
+        address.address,
+        address.city,
+        address.state,
+        address.country || "India",
+      ]
+        .filter(Boolean)
+        .join(", "),
+      font,
+      9,
+      PAGE_WIDTH - 32
+    );
+
+    for (const line of addressLines.slice(0, 4)) {
+      page.drawText(line, { x: 16, y, size: 9, font });
+      y -= 11;
+    }
+
+    page.drawText(`PIN: ${address.pincode || ""}`, {
+      x: 16,
+      y,
+      size: 9,
+      font: fontBold,
+    });
+    y -= 12;
+
+    if (address.phone) {
+      page.drawText(`Ph: ${address.phone}`, {
+        x: 16,
+        y,
+        size: 9,
+        font,
+      });
+      y -= 12;
+    }
+
+    y -= 2;
+    drawLine(page, y);
+    y -= 14;
+
+    // Products
+    page.drawText("PRODUCT", {
+      x: 16,
+      y,
+      size: 8,
+      font: fontBold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    page.drawText("AMOUNT", {
+      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize("AMOUNT", 8),
+      y,
+      size: 8,
+      font: fontBold,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    y -= 8;
+    drawLine(page, y, 16, PAGE_WIDTH - 16);
+    y -= 12;
+
+    const maxItemRows = 5;
+    for (const item of items.slice(0, maxItemRows)) {
+      const name = `${item.name}${item.qty > 1 ? ` x ${item.qty}` : ""}`;
+      const amount = formatINR(item.price * item.qty);
+      const nameLines = wrapText(name, font, 9, 170);
+
+      page.drawText(nameLines[0] || "", { x: 16, y, size: 9, font });
+      page.drawText(amount, {
+        x: PAGE_WIDTH - 16 - font.widthOfTextAtSize(amount, 9),
+        y,
+        size: 9,
+        font,
+      });
+      y -= 11;
+
+      for (const extra of nameLines.slice(1, 2)) {
+        page.drawText(extra, { x: 16, y, size: 9, font });
+        y -= 11;
+      }
+    }
+
+    if (items.length > maxItemRows) {
+      page.drawText(`+${items.length - maxItemRows} more item(s)`, {
+        x: 16,
+        y,
+        size: 8,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      y -= 11;
+    }
+
+    y -= 2;
+    const totalLabel = "Total";
+    const totalValue = formatINR(order.totalPrice);
+    page.drawText(totalLabel, { x: 16, y, size: 10, font: fontBold });
+    page.drawText(totalValue, {
+      x: PAGE_WIDTH - 16 - fontBold.widthOfTextAtSize(totalValue, 10),
+      y,
+      size: 10,
+      font: fontBold,
+    });
+
+    // Footer
+    page.drawText(
+      `Order: ${String(order._id).slice(-8).toUpperCase()}`,
+      {
+        x: 16,
+        y: 16,
+        size: 7,
+        font,
+        color: rgb(0.35, 0.35, 0.35),
+      }
+    );
+    page.drawText("No returns accepted", {
+      x: PAGE_WIDTH - 16 - font.widthOfTextAtSize("No returns accepted", 7),
+      y: 16,
+      size: 7,
+      font,
+      color: rgb(0.35, 0.35, 0.35),
+    });
+
+    const pdfBytes = await pdfDoc.save();
+
+    return {
+      success: true,
+      data: Buffer.from(pdfBytes),
+      contentType: "application/pdf",
+    };
   } catch (error) {
     console.error("Custom shipping label error:", error);
     return {
